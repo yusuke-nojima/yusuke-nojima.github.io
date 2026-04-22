@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IEC Rhythm Maker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap');
+
+:root {
+  --bg: #0a0a0f;
+  --panel: #12121a;
+  --border: #1e1e2e;
+  --accent: #ff3c5a;
+  --accent2: #00e5ff;
+  --accent3: #ffe600;
+  --text: #c0c0d0;
+  --dim: #3a3a4a;
+  --beat-off: #1a1a28;
+  --kit-color: #ff3c5a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,15,0.97);
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  flex-wrap: wrap;
+}
+
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(255,60,90,0.45);
+  line-height: 1;
+  white-space: nowrap;
+}
+.logo span { color: var(--accent2); }
+
+.gen-badge {
+  background: var(--border);
+  border: 1px solid var(--dim);
+  padding: 3px 10px;
+  font-size: 0.66rem;
+  color: var(--accent3);
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+}
+
+/* ── Kit selector ── */
+.kit-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.kit-label {
+  font-size: 0.56rem;
+  color: var(--dim);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.kit-btn {
+  background: transparent;
+  border: 1px solid var(--dim);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: all 0.13s;
+  white-space: nowrap;
+}
+.kit-btn:hover { border-color: var(--kit-color); color: var(--kit-color); }
+.kit-btn.active {
+  border-color: var(--kit-color);
+  background: rgba(255,255,255,0.06);
+  color: var(--kit-color);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--kit-color) 30%, transparent);
+}
+
+/* Kit color themes via body class */
+body.kit-techno     { --kit-color: #ff3c5a; }
+body.kit-african    { --kit-color: #ff8c00; }
+body.kit-latin      { --kit-color: #ff3ccc; }
+body.kit-asian      { --kit-color: #80ff50; }
+body.kit-middleeast { --kit-color: #b090ff; }
+
+/* ── Main grid ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 2px;
+}
+@media (max-width: 960px) { .main-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .main-grid { grid-template-columns: 1fr; } }
+
+/* ── Card ── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 12px 10px 10px;
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.card.selected {
+  border-color: var(--accent3);
+  box-shadow: 0 0 0 1px var(--accent3) inset, 0 0 22px rgba(255,230,0,0.06);
+}
+.card.playing { border-color: var(--accent2); }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.pattern-id {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.25rem;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+.card-controls { display: flex; gap: 5px; align-items: center; }
+
+.btn-play {
+  width: 26px; height: 26px;
+  background: transparent;
+  border: 1px solid var(--dim);
+  cursor: pointer;
+  padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+}
+.btn-play::after {
+  content: '';
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 6px 0 6px 12px;
+  border-color: transparent transparent transparent var(--accent2);
+  transition: border-color 0.12s;
+}
+.btn-play:hover::after { border-left-color: var(--accent); }
+.btn-play.active::after { border-left-color: var(--accent3); }
+
+.btn-select {
+  width: 26px; height: 26px;
+  background: transparent;
+  border: 1px solid var(--dim);
+  color: var(--accent3);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-family: 'Space Mono', monospace;
+  transition: all 0.12s;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-select:hover { border-color: var(--accent3); }
+.btn-select.checked { background: var(--accent3); color: #000; border-color: var(--accent3); }
+
+/* ── Step grid ── */
+.beat-nums {
+  display: grid;
+  grid-template-columns: 40px repeat(16, 1fr);
+  gap: 2px;
+  margin-bottom: 3px;
+}
+.beat-num { font-size: 0.4rem; color: var(--dim); text-align: center; }
+.beat-num.q { color: rgba(255,60,90,0.45); }
+
+.step-grid {
+  display: grid;
+  grid-template-columns: 40px repeat(16, 1fr);
+  gap: 2px;
+  margin-bottom: 3px;
+}
+.row-label {
+  font-size: 0.44rem;
+  color: var(--dim);
+  display: flex; align-items: center;
+  letter-spacing: 0.03em;
+  line-height: 1.15;
+  padding-right: 2px;
+  word-break: break-all;
+}
+
+.step {
+  aspect-ratio: 1;
+  background: var(--beat-off);
+  border: none;
+  cursor: pointer;
+  transition: background 0.07s, filter 0.07s;
+  min-height: 14px;
+}
+.step:hover { filter: brightness(1.6); }
+.step.on { background: var(--row-color, var(--accent)); }
+.step.beat-pos { box-shadow: 0 0 0 1px rgba(255,255,255,0.5) inset; }
+.step.beat-pos.on { filter: brightness(1.8); }
+
+/* ── BPM slider ── */
+.bpm-row {
+  display: flex; align-items: center; gap: 7px;
+  margin-top: 7px;
+}
+.bpm-label { font-size: 0.56rem; color: var(--dim); width: 28px; letter-spacing: 0.1em; }
+.bpm-val { font-size: 0.63rem; color: var(--accent3); width: 32px; text-align: right; }
+
+input[type=range] {
+  flex: 1;
+  -webkit-appearance: none; appearance: none;
+  height: 3px; background: var(--dim);
+  outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px; height: 11px;
+  background: var(--accent3);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+/* ── Bottom bar ── */
+.bottom-bar {
+  position: sticky; bottom: 0;
+  background: rgba(10,10,15,0.97);
+  border-top: 1px solid var(--border);
+  padding: 10px 18px;
+  display: flex; align-items: center; gap: 12px;
+  z-index: 500; flex-wrap: wrap;
+}
+
+.btn-evolve {
+  background: var(--accent);
+  border: none; color: #fff;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.15em;
+  padding: 9px 24px;
+  cursor: pointer;
+  transition: all 0.12s;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+.btn-evolve:hover { background: #ff6070; transform: scale(1.03); box-shadow: 0 0 18px rgba(255,60,90,0.4); }
+.btn-evolve:active { transform: scale(0.97); }
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--dim);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.btn-secondary:hover { border-color: var(--accent2); color: var(--accent2); }
+
+.evolve-info { font-size: 0.58rem; color: var(--dim); letter-spacing: 0.05em; line-height: 1.7; }
+.evolve-info strong { color: var(--accent3); }
+
+.status-text { margin-left: auto; font-size: 0.6rem; color: var(--accent2); letter-spacing: 0.1em; }
+.status-text.warn { color: var(--accent); }
+
+@keyframes glitch {
+  0%,100% { transform: translate(0); }
+  20% { transform: translate(-2px,1px); filter: hue-rotate(20deg); }
+  40% { transform: translate(2px,-1px); filter: hue-rotate(-20deg); }
+  60% { transform: translate(-1px,2px); }
+  80% { transform: translate(1px,-2px); }
+}
+.glitching { animation: glitch 0.32s ease-in-out; }
+
+/* ── Help button ── */
+.btn-help {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--dim);
+  color: var(--accent2);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.btn-help:hover {
+  border-color: var(--accent2);
+  background: rgba(0,229,255,0.1);
+  box-shadow: 0 0 12px rgba(0,229,255,0.3);
+  transform: scale(1.1);
+}
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  max-width: 680px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  position: relative;
+  transform: translateY(18px) scale(0.97);
+  transition: transform 0.22s;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) transparent;
+}
+.modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+.modal::-webkit-scrollbar { width: 4px; }
+.modal::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+/* Diagonal accent stripe at top */
+.modal::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+}
+
+.modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 22px 14px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.modal-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: 0.12em;
+  line-height: 1.15;
+  color: var(--text);
+}
+.modal-title span { color: var(--accent); }
+.modal-title small {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--dim);
+  letter-spacing: 0.1em;
+  font-weight: 400;
+  margin-top: 3px;
+}
+
+.btn-close {
+  background: transparent;
+  border: 1px solid var(--dim);
+  color: var(--text);
+  width: 28px; height: 28px;
+  cursor: pointer;
+  font-size: 1rem;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+  line-height: 1;
+}
+.btn-close:hover { border-color: var(--accent); color: var(--accent); }
+
+.modal-body { padding: 20px 22px 24px; }
+
+/* Section */
+.help-section { margin-bottom: 24px; }
+.help-section:last-child { margin-bottom: 0; }
+
+.section-tag {
+  display: inline-block;
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  padding: 2px 8px;
+  border: 1px solid;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+.tag-concept { color: var(--accent2); border-color: var(--accent2); background: rgba(0,229,255,0.07); }
+.tag-usage   { color: var(--accent3); border-color: var(--accent3); background: rgba(255,230,0,0.07); }
+.tag-tips    { color: var(--accent);  border-color: var(--accent);  background: rgba(255,60,90,0.07); }
+
+.help-section h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.help-section p {
+  font-size: 0.65rem;
+  color: var(--text);
+  line-height: 1.85;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+.help-section p:last-child { margin-bottom: 0; }
+
+/* Step list */
+.step-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.step-list li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 0.63rem;
+  line-height: 1.7;
+  color: var(--text);
+  opacity: 0.88;
+}
+.step-num {
+  flex-shrink: 0;
+  width: 20px; height: 20px;
+  background: var(--border);
+  border: 1px solid var(--dim);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.8rem;
+  color: var(--accent3);
+  margin-top: 1px;
+}
+
+/* Inline kbd-style labels */
+.kbdl {
+  display: inline-flex; align-items: center;
+  background: var(--border);
+  border: 1px solid var(--dim);
+  padding: 1px 6px;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  color: var(--accent2);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* GA diagram */
+.ga-diagram {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; flex-wrap: wrap;
+  padding: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  margin-top: 10px;
+}
+.ga-node {
+  text-align: center;
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  line-height: 1.5;
+}
+.ga-node .icon {
+  font-size: 1.4rem;
+  display: block;
+  margin-bottom: 3px;
+}
+.ga-arrow {
+  font-size: 1rem;
+  color: var(--dim);
+  flex-shrink: 0;
+}
+
+/* Kit table */
+.kit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.6rem;
+  margin-top: 8px;
+}
+.kit-table th, .kit-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.kit-table th {
+  color: var(--dim);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  font-size: 0.54rem;
+}
+.kit-table td { color: var(--text); opacity: 0.85; line-height: 1.5; }
+.kit-table tr:last-child td { border-bottom: none; }
+.kit-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* Divider */
+.modal-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+
+/* ── Language toggle ── */
+.modal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lang-toggle {
+  display: flex;
+  border: 1px solid var(--dim);
+  overflow: hidden;
+}
+.lang-btn {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: all 0.14s;
+  line-height: 1;
+}
+.lang-btn + .lang-btn { border-left: 1px solid var(--dim); }
+.lang-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.lang-btn.active {
+  background: var(--accent2);
+  color: #000;
+  font-weight: 700;
+}
+
+/* Language visibility — scoped to modal-body so the toggle buttons are never hidden */
+body.lang-ja .modal-body [data-lang="en"] { display: none; }
+body.lang-en .modal-body [data-lang="ja"] { display: none; }
+</style>
+</head>
+<body class="kit-techno lang-en">
+
+<header>
+  <div class="logo">IEC <span>RHYTHM</span></div>
+  <div class="gen-badge" id="genBadge">GEN 001</div>
+  <button class="btn-help" onclick="openHelp()" title="使い方・概念説明">?</button>
+  <div class="kit-bar">
+    <div class="kit-label">KIT:</div>
+    <button class="kit-btn active" data-kit="techno"     onclick="switchKit('techno',this)">🥁 TECHNO</button>
+    <button class="kit-btn"        data-kit="african"    onclick="switchKit('african',this)">🌍 AFRICAN</button>
+    <button class="kit-btn"        data-kit="latin"      onclick="switchKit('latin',this)">🌴 LATIN</button>
+    <button class="kit-btn"        data-kit="asian"      onclick="switchKit('asian',this)">🎋 ASIAN</button>
+    <button class="kit-btn"        data-kit="middleeast" onclick="switchKit('middleeast',this)">🌙 MIDDLE EAST</button>
+  </div>
+</header>
+
+<!-- ══════════════ HELP MODAL ══════════════ -->
+<div class="modal-overlay" id="helpOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="helpModal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>IEC</span> RHYTHM MAKER
+        <small>INTERACTIVE EVOLUTIONARY COMPUTATION — GUIDE</small>
+      </div>
+      <div class="modal-header-right">
+        <!-- Language toggle -->
+        <div class="lang-toggle" id="langToggle">
+          <button class="lang-btn"        data-lang="ja" onclick="setLang('ja')">JA</button>
+          <button class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+        </div>
+        <button class="btn-close" onclick="closeHelp()" title="閉じる / Close">✕</button>
+      </div>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- ── CONCEPT ─────────────────────────── -->
+      <div class="help-section">
+        <div class="section-tag tag-concept">CONCEPT</div>
+
+        <h3>
+          <span data-lang="ja">対話型進化計算とは？</span>
+          <span data-lang="en">What is Interactive Evolutionary Computation?</span>
+        </h3>
+
+        <p>
+          <span data-lang="ja">進化計算（Evolutionary Computation）とは、生物の進化をモデルにした最適化アルゴリズムです。「交叉」「突然変異」「選択」の3操作を繰り返すことで、解を世代を超えて改良していきます。</span>
+          <span data-lang="en">Evolutionary Computation is an optimization algorithm modeled on biological evolution. By repeating three operations — <em>crossover</em>, <em>mutation</em>, and <em>selection</em> — solutions are refined across successive generations.</span>
+        </p>
+        <p>
+          <span data-lang="ja"><strong style="color:var(--accent2)">対話型</strong>進化計算（IEC）は、評価関数を人間の感性に委ねたものです。コンピュータには「どのリズムが良いか」を数式で定義できないため、<em style="color:var(--accent3)">あなた自身が選択者</em>になることで、アルゴリズムを正しく機能させます。</span>
+          <span data-lang="en"><strong style="color:var(--accent2)">Interactive</strong> Evolutionary Computation (IEC) delegates the fitness function to human intuition. Because there is no formula to define "which rhythm sounds good," <em style="color:var(--accent3)">you become the selector</em>, guiding the algorithm toward your taste.</span>
+        </p>
+
+        <div class="ga-diagram">
+          <div class="ga-node">
+            <span class="icon">🎲</span>
+            <span data-lang="ja">初期集団<br>（ランダム）</span>
+            <span data-lang="en">Initial pop.<br>(random)</span>
+          </div>
+          <div class="ga-arrow">→</div>
+          <div class="ga-node">
+            <span class="icon">👂</span>
+            <span data-lang="ja">聴いて<br>評価する</span>
+            <span data-lang="en">Listen &amp;<br>evaluate</span>
+          </div>
+          <div class="ga-arrow">→</div>
+          <div class="ga-node">
+            <span class="icon">★</span>
+            <span data-lang="ja">気に入った<br>個体を選択</span>
+            <span data-lang="en">Select your<br>favorites</span>
+          </div>
+          <div class="ga-arrow">→</div>
+          <div class="ga-node">
+            <span class="icon">🧬</span>
+            <span data-lang="ja">交叉 ＋<br>突然変異</span>
+            <span data-lang="en">Crossover +<br>mutation</span>
+          </div>
+          <div class="ga-arrow">→</div>
+          <div class="ga-node">
+            <span class="icon">🎵</span>
+            <span data-lang="ja">次世代<br>生成</span>
+            <span data-lang="en">Next gen.<br>created</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="modal-divider">
+
+      <!-- ── HOW TO USE ─────────────────────── -->
+      <div class="help-section">
+        <div class="section-tag tag-usage">HOW TO USE</div>
+
+        <h3>
+          <span data-lang="ja">操作手順</span>
+          <span data-lang="en">Step-by-step guide</span>
+        </h3>
+
+        <ol class="step-list">
+          <li>
+            <div class="step-num">1</div>
+            <div>
+              <span data-lang="ja">上部の <span class="kbdl">KIT</span> ボタンで音色セットを選ぶ。TECHNO・AFRICAN・LATIN・ASIAN・MIDDLE EAST の5種類。</span>
+              <span data-lang="en">Choose a sound kit with the <span class="kbdl">KIT</span> buttons at the top. Five kits are available: TECHNO, AFRICAN, LATIN, ASIAN, and MIDDLE EAST.</span>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">2</div>
+            <div>
+              <span data-lang="ja">各パターンカードの <span class="kbdl">▶</span> ボタンを押して再生。<span class="kbdl">BPM</span> スライダーでテンポを調整できる。</span>
+              <span data-lang="en">Press the <span class="kbdl">▶</span> button on any pattern card to play it. Use the <span class="kbdl">BPM</span> slider to adjust the tempo.</span>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">3</div>
+            <div>
+              <span data-lang="ja">気に入ったパターンの <span class="kbdl">★</span> ボタンを押して「親」として選択（複数選択可）。カードが金色に光る。</span>
+              <span data-lang="en">Press the <span class="kbdl">★</span> button on patterns you like to mark them as parents (multiple selections allowed). Selected cards glow gold.</span>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">4</div>
+            <div>
+              <span data-lang="ja">下部の <span class="kbdl">▶ EVOLVE</span> を押すと、選択した親から交叉・突然変異で次世代の6パターンが生成される。★ なしで EVOLVE すると全ランダム初期化。</span>
+              <span data-lang="en">Click <span class="kbdl">▶ EVOLVE</span> at the bottom to generate 6 new patterns via crossover and mutation from the selected parents. Evolving with no ★ selected triggers a full random reset.</span>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">5</div>
+            <div>
+              <span data-lang="ja">手順 2〜4 を繰り返す。世代を重ねるほど、あなたの感性に近いリズムへ収束していく。</span>
+              <span data-lang="en">Repeat steps 2–4. With each generation the rhythms will converge toward your personal taste.</span>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">6</div>
+            <div>
+              <span data-lang="ja">ステップボタンを直接クリックして手動編集もできる。進化と手動編集を組み合わせるのが上達のコツ。</span>
+              <span data-lang="en">You can also click individual step buttons to edit patterns by hand. Combining evolution with manual tweaks is the key to great results.</span>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <hr class="modal-divider">
+
+      <!-- ── KITS ──────────────────────────── -->
+      <div class="help-section">
+        <div class="section-tag tag-usage">KITS</div>
+
+        <h3>
+          <span data-lang="ja">音色キット一覧</span>
+          <span data-lang="en">Sound kit reference</span>
+        </h3>
+
+        <table class="kit-table">
+          <thead>
+            <tr>
+              <th>KIT</th>
+              <th><span data-lang="ja">楽器1</span><span data-lang="en">Instr. 1</span></th>
+              <th><span data-lang="ja">楽器2</span><span data-lang="en">Instr. 2</span></th>
+              <th><span data-lang="ja">楽器3</span><span data-lang="en">Instr. 3</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>🥁 <strong>TECHNO</strong></td>
+              <td><span class="kit-dot" style="background:#00e5ff"></span>Hi-Hat</td>
+              <td><span class="kit-dot" style="background:#39ff14"></span>Snare</td>
+              <td><span class="kit-dot" style="background:#ff3c5a"></span>Kick</td>
+            </tr>
+            <tr>
+              <td>🌍 <strong>AFRICAN</strong></td>
+              <td><span class="kit-dot" style="background:#ffe600"></span>Shaker</td>
+              <td><span class="kit-dot" style="background:#ff8c00"></span>Djembe</td>
+              <td><span class="kit-dot" style="background:#ff4400"></span>Talking Drum</td>
+            </tr>
+            <tr>
+              <td>🌴 <strong>LATIN</strong></td>
+              <td><span class="kit-dot" style="background:#ff3ccc"></span>Claves</td>
+              <td><span class="kit-dot" style="background:#ff7c3c"></span>Conga</td>
+              <td><span class="kit-dot" style="background:#ffcc44"></span>Bongo</td>
+            </tr>
+            <tr>
+              <td>🎋 <strong>ASIAN</strong></td>
+              <td><span class="kit-dot" style="background:#a0ff60"></span>Wood Block</td>
+              <td><span class="kit-dot" style="background:#60ffcc"></span>Taiko</td>
+              <td><span class="kit-dot" style="background:#c8ff40"></span>Gamelan Gong</td>
+            </tr>
+            <tr>
+              <td>🌙 <strong>MIDDLE EAST</strong></td>
+              <td><span class="kit-dot" style="background:#c8a0ff"></span>Riqq</td>
+              <td><span class="kit-dot" style="background:#9060ff"></span>Doumbek</td>
+              <td><span class="kit-dot" style="background:#ff60c8"></span>Duff</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top:8px; font-size:0.58rem; color:var(--dim)">
+          <span data-lang="ja">※ すべての音はWeb Audio APIによるリアルタイム合成。外部ファイル不要。</span>
+          <span data-lang="en">※ All sounds are synthesized in real time via the Web Audio API — no external files required.</span>
+        </p>
+      </div>
+
+      <hr class="modal-divider">
+
+      <!-- ── TIPS ──────────────────────────── -->
+      <div class="help-section">
+        <div class="section-tag tag-tips">TIPS</div>
+
+        <h3>
+          <span data-lang="ja">上手な使い方</span>
+          <span data-lang="en">Tips for better results</span>
+        </h3>
+
+        <p>
+          <span data-lang="ja"><strong style="color:var(--accent3)">1〜2個だけ選択</strong>すると特定のリズムに強く収束する。<strong style="color:var(--accent3)">3〜5個選択</strong>すると多様な子孫が生まれ、探索範囲が広がる。</span>
+          <span data-lang="en">Selecting <strong style="color:var(--accent3)">only 1–2 patterns</strong> causes strong convergence toward a specific style. Selecting <strong style="color:var(--accent3)">3–5 patterns</strong> produces more diverse offspring and broadens the search space.</span>
+        </p>
+        <p>
+          <span data-lang="ja">キットを切り替えてもステップデータは保持されるため、たとえば TECHNO で育てたパターンを ASIAN に切り替えて聴き比べるといった<strong style="color:var(--accent2)">音色クロス実験</strong>が楽しめる。</span>
+          <span data-lang="en">Step data is preserved when you switch kits, so you can enjoy <strong style="color:var(--accent2)">timbre-cross experiments</strong> — for example, evolving a pattern in TECHNO then switching to ASIAN to hear it with entirely different sounds.</span>
+        </p>
+        <p>
+          <span data-lang="ja">BPM も遺伝的に継承される。テンポ違いのパターンを親にすると、中間的なテンポを持つ子が生まれる。</span>
+          <span data-lang="en">BPM is also inherited genetically. If you select parents with different tempos, offspring will tend to fall somewhere in between.</span>
+        </p>
+      </div>
+
+    </div><!-- /.modal-body -->
+  </div><!-- /.modal -->
+</div><!-- /.modal-overlay -->
+
+<div class="main-grid" id="mainGrid"></div>
+
+<div class="bottom-bar">
+  <button class="btn-evolve" id="btnEvolve" onclick="evolve()">▶ EVOLVE</button>
+  <button class="btn-secondary" onclick="randomizeAll()">RANDOMIZE ALL</button>
+  <div class="evolve-info">
+    <strong id="selCount">0</strong> selected as parents<br>
+    Select ★ favorites → EVOLVE next gen
+  </div>
+  <div class="status-text" id="statusText">READY</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  KIT DEFINITIONS  — Web Audio synthesis only
+// ═══════════════════════════════════════════════
+const KITS = {
+
+  // ── TECHNO / 808-style ─────────────────────
+  techno: {
+    name: 'TECHNO / TR-808',
+    rows: [
+      { label: 'HI-HAT', color: '#00e5ff' },
+      { label: 'SNARE',  color: '#39ff14' },
+      { label: 'KICK',   color: '#ff3c5a' },
+    ],
+    synth: [
+      (ac,t) => { // closed hi-hat
+        const sr=ac.sampleRate, dur=0.09;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(sr*0.012))*0.55;
+        play(ac,buf,t,0.9);
+      },
+      (ac,t) => { // snare
+        const sr=ac.sampleRate, dur=0.22;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr;
+          d[i]=(Math.sin(2*Math.PI*200*ti)*Math.exp(-ti*28)*0.45
+               +(Math.random()*2-1)*Math.exp(-ti*16)*0.75)*0.85;
+        }
+        play(ac,buf,t,0.9);
+      },
+      (ac,t) => { // kick
+        const sr=ac.sampleRate, dur=0.55;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr;
+          d[i]=Math.sin(2*Math.PI*(55*Math.exp(-ti*28)+28)*ti)*Math.exp(-ti*16)*1.15
+              +(Math.random()*2-1)*Math.exp(-ti*90)*0.12;
+        }
+        play(ac,buf,t,1.0);
+      },
+    ]
+  },
+
+  // ── AFRICAN ────────────────────────────────
+  african: {
+    name: 'AFRICAN PERCUSSION',
+    rows: [
+      { label: 'SHAKER',  color: '#ffe600' },
+      { label: 'DJEMBE',  color: '#ff8c00' },
+      { label: 'TALKING', color: '#ff4400' },
+    ],
+    synth: [
+      (ac,t) => { // shekere / shaker
+        const sr=ac.sampleRate, dur=0.1;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr;
+          d[i]=(Math.random()*2-1)*(Math.exp(-ti*55)+Math.exp(-(ti-0.02)*80)*0.3)*0.5;
+          d[i]+=Math.sin(2*Math.PI*8000*ti)*Math.exp(-ti*70)*0.07;
+        }
+        play(ac,buf,t,0.75);
+      },
+      (ac,t) => { // djembe slap
+        const sr=ac.sampleRate, dur=0.38;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr, f0=180;
+          d[i] =Math.sin(2*Math.PI*f0*ti)*Math.exp(-ti*18)*0.6;
+          d[i]+=Math.sin(2*Math.PI*f0*1.59*ti)*Math.exp(-ti*26)*0.35;
+          d[i]+=Math.sin(2*Math.PI*f0*2.14*ti)*Math.exp(-ti*38)*0.18;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*120)*0.4;
+          d[i]+=Math.sin(2*Math.PI*(f0+600*Math.exp(-ti*90))*ti)*Math.exp(-ti*80)*0.25;
+        }
+        play(ac,buf,t,0.95);
+      },
+      (ac,t) => { // talking drum / udu bass
+        const sr=ac.sampleRate, dur=0.52;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr, freq=120+220*Math.exp(-ti*14);
+          d[i] =Math.sin(2*Math.PI*freq*ti)*Math.exp(-ti*9)*0.9;
+          d[i]+=Math.sin(2*Math.PI*freq*2.3*ti)*Math.exp(-ti*18)*0.3;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*100)*0.2;
+        }
+        play(ac,buf,t,1.0);
+      },
+    ]
+  },
+
+  // ── LATIN ──────────────────────────────────
+  latin: {
+    name: 'LATIN / AFRO-CUBAN',
+    rows: [
+      { label: 'CLAVES', color: '#ff3ccc' },
+      { label: 'CONGA',  color: '#ff7c3c' },
+      { label: 'BONGO',  color: '#ffcc44' },
+    ],
+    synth: [
+      (ac,t) => { // claves
+        const sr=ac.sampleRate, dur=0.18;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr, env=Math.exp(-ti*60);
+          d[i] =Math.sin(2*Math.PI*2500*ti)*env*0.6;
+          d[i]+=Math.sin(2*Math.PI*3500*ti)*env*0.25;
+          d[i]+=Math.sin(2*Math.PI*5250*ti)*Math.exp(-ti*100)*0.12;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*200)*0.18;
+        }
+        play(ac,buf,t,0.8);
+      },
+      (ac,t) => { // conga open tone
+        const sr=ac.sampleRate, dur=0.58;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr, f0=220;
+          d[i] =Math.sin(2*Math.PI*f0*ti)*Math.exp(-ti*8)*0.75;
+          d[i]+=Math.sin(2*Math.PI*f0*1.35*ti)*Math.exp(-ti*14)*0.4;
+          d[i]+=Math.sin(2*Math.PI*f0*1.8*ti)*Math.exp(-ti*22)*0.2;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*150)*0.3;
+          d[i]+=Math.sin(2*Math.PI*(f0+350*Math.exp(-ti*50))*ti)*Math.exp(-ti*60)*0.3;
+        }
+        play(ac,buf,t,0.9);
+      },
+      (ac,t) => { // bongo
+        const sr=ac.sampleRate, dur=0.28;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr, f0=380+(Math.random()*40-20);
+          d[i] =Math.sin(2*Math.PI*f0*ti)*Math.exp(-ti*22)*0.6;
+          d[i]+=Math.sin(2*Math.PI*f0*1.5*ti)*Math.exp(-ti*35)*0.3;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*160)*0.25;
+        }
+        play(ac,buf,t,0.85);
+      },
+    ]
+  },
+
+  // ── ASIAN ──────────────────────────────────
+  asian: {
+    name: 'ASIAN — TAIKO · GAMELAN',
+    rows: [
+      { label: 'WOOD',  color: '#a0ff60' },
+      { label: 'TAIKO', color: '#60ffcc' },
+      { label: 'GONG',  color: '#c8ff40' },
+    ],
+    synth: [
+      (ac,t) => { // wood block / temple block
+        const sr=ac.sampleRate, dur=0.13;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr, env=Math.exp(-ti*55);
+          d[i] =Math.sin(2*Math.PI*1200*ti)*env*0.5;
+          d[i]+=Math.sin(2*Math.PI*3312*ti)*Math.exp(-ti*80)*0.22;
+          d[i]+=Math.sin(2*Math.PI*4920*ti)*Math.exp(-ti*110)*0.1;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*160)*0.15;
+        }
+        play(ac,buf,t,0.72);
+      },
+      (ac,t) => { // odaiko taiko
+        const sr=ac.sampleRate, dur=0.65;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr, f0=70;
+          d[i] =Math.sin(2*Math.PI*f0*ti)*Math.exp(-ti*6)*0.95;
+          d[i]+=Math.sin(2*Math.PI*f0*2.0*ti)*Math.exp(-ti*11)*0.45;
+          d[i]+=Math.sin(2*Math.PI*f0*3.1*ti)*Math.exp(-ti*18)*0.2;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*130)*0.35;
+          d[i]+=Math.sin(2*Math.PI*1800*ti)*Math.exp(-ti*140)*0.12;
+        }
+        play(ac,buf,t,1.0);
+      },
+      (ac,t) => { // gamelan gong / tam-tam
+        const sr=ac.sampleRate, dur=1.8;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        const f0=80;
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr;
+          d[i] =Math.sin(2*Math.PI*f0*ti)     *Math.exp(-ti*1.8)*0.8;
+          d[i]+=Math.sin(2*Math.PI*f0*2.76*ti) *Math.exp(-ti*2.2)*0.5;
+          d[i]+=Math.sin(2*Math.PI*f0*5.4*ti)  *Math.exp(-ti*3.5)*0.28;
+          d[i]+=Math.sin(2*Math.PI*f0*8.9*ti)  *Math.exp(-ti*4.8)*0.14;
+          d[i]+=Math.sin(2*Math.PI*f0*13.3*ti) *Math.exp(-ti*6.5)*0.07;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*80)*0.28;
+          d[i]*=1+0.04*Math.sin(2*Math.PI*5.5*ti); // shimmer
+        }
+        play(ac,buf,t,0.85);
+      },
+    ]
+  },
+
+  // ── MIDDLE EAST ────────────────────────────
+  middleeast: {
+    name: 'MIDDLE EAST / N. AFRICA',
+    rows: [
+      { label: 'RIQQ',    color: '#c8a0ff' },
+      { label: 'DOUMBEK', color: '#9060ff' },
+      { label: 'DUFF',    color: '#ff60c8' },
+    ],
+    synth: [
+      (ac,t) => { // riqq (frame drum + jingle)
+        const sr=ac.sampleRate, dur=0.2;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr;
+          for(let h=1;h<=7;h++)
+            d[i]+=Math.sin(2*Math.PI*(3200+h*480)*ti)*Math.exp(-ti*(40+h*12))*(0.18/h);
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*90)*0.2;
+          d[i]+=Math.sin(2*Math.PI*320*ti)*Math.exp(-ti*55)*0.15;
+        }
+        play(ac,buf,t,0.72);
+      },
+      (ac,t) => { // doumbek "dom" bass
+        const sr=ac.sampleRate, dur=0.55;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr, freq=140+260*Math.exp(-ti*22);
+          d[i] =Math.sin(2*Math.PI*freq*ti)*Math.exp(-ti*7)*0.9;
+          d[i]+=Math.sin(2*Math.PI*freq*1.6*ti)*Math.exp(-ti*15)*0.35;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*120)*0.22;
+        }
+        play(ac,buf,t,1.0);
+      },
+      (ac,t) => { // duff / tek high slap
+        const sr=ac.sampleRate, dur=0.3;
+        const buf=ac.createBuffer(1,sr*dur,sr), d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          const ti=i/sr, f0=420+380*Math.exp(-ti*40);
+          d[i] =Math.sin(2*Math.PI*f0*ti)*Math.exp(-ti*28)*0.65;
+          d[i]+=Math.sin(2*Math.PI*f0*1.7*ti)*Math.exp(-ti*45)*0.3;
+          d[i]+=Math.sin(2*Math.PI*f0*2.8*ti)*Math.exp(-ti*65)*0.15;
+          d[i]+=(Math.random()*2-1)*Math.exp(-ti*180)*0.28;
+        }
+        play(ac,buf,t,0.85);
+      },
+    ]
+  },
+};
+
+// ═══════════════════════════════════════════════
+//  AUDIO UTILITIES
+// ═══════════════════════════════════════════════
+let audioCtx=null, masterGain=null;
+
+async function initAudio(){
+  if(audioCtx) return;
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  masterGain=audioCtx.createGain();
+  masterGain.gain.value=0.82;
+  masterGain.connect(audioCtx.destination);
+}
+
+function play(ac,buf,time,vol=1.0){
+  const src=ac.createBufferSource();
+  src.buffer=buf;
+  const g=ac.createGain(); g.gain.value=vol;
+  src.connect(g); g.connect(masterGain||ac.destination);
+  src.start(time);
+}
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const N_PATTERNS=6, N_STEPS=16;
+let currentKit='techno', generation=1;
+let patterns=[];
+let selected=new Array(N_PATTERNS).fill(false);
+let currentPlay=-1, isPlaying=false;
+let beatPos=0, schedulerTimer=null, nextBeatTime=0;
+
+// ═══════════════════════════════════════════════
+//  SEQUENCER
+// ═══════════════════════════════════════════════
+function startSequencer(idx){
+  stopSequencer();
+  currentPlay=idx; beatPos=0; isPlaying=true;
+  nextBeatTime=audioCtx.currentTime+0.05;
+  scheduleBeats();
+  setStatus(`PLAYING #${idx+1}`,false);
+}
+
+function stopSequencer(){
+  if(schedulerTimer) clearTimeout(schedulerTimer);
+  schedulerTimer=null; isPlaying=false; beatPos=0;
+  updateBeatDisplay(-1);
+}
+
+function scheduleBeats(){
+  if(!isPlaying) return;
+  const pat=patterns[currentPlay];
+  const sps=60.0/pat.bpm/4;
+  while(nextBeatTime<audioCtx.currentTime+0.12){
+    const sb=beatPos;
+    KITS[currentKit].synth.forEach((fn,r)=>{ if(pat.rows[r][sb]) fn(audioCtx,nextBeatTime); });
+    const delay=Math.max(0,(nextBeatTime-audioCtx.currentTime)*1000);
+    setTimeout(()=>{ if(isPlaying&&currentPlay!==-1) updateBeatDisplay(sb); },delay);
+    beatPos=(beatPos+1)%N_STEPS;
+    nextBeatTime+=sps;
+  }
+  schedulerTimer=setTimeout(scheduleBeats,80);
+}
+
+function updateBeatDisplay(beat){
+  document.querySelectorAll('.step').forEach(el=>el.classList.remove('beat-pos'));
+  if(beat<0) return;
+  const card=document.querySelector(`.card[data-idx="${currentPlay}"]`);
+  if(!card) return;
+  const nRows=KITS[currentKit].rows.length;
+  const allSteps=card.querySelectorAll('.step');
+  for(let r=0;r<nRows;r++){
+    const el=allSteps[r*N_STEPS+beat];
+    if(el) el.classList.add('beat-pos');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  PATTERNS
+// ═══════════════════════════════════════════════
+function randomPattern(density=0.22){
+  const nRows=KITS[currentKit].rows.length;
+  const rows=[];
+  for(let r=0;r<nRows;r++){
+    const row=[];
+    for(let s=0;s<N_STEPS;s++) row.push(Math.random()<density);
+    rows.push(row);
+  }
+  return {rows, bpm:70+Math.floor(Math.random()*130)};
+}
+
+function initPatterns(){
+  patterns=[];
+  for(let i=0;i<N_PATTERNS;i++) patterns.push(randomPattern());
+}
+
+function adaptPatternsToKit(){
+  const nRows=KITS[currentKit].rows.length;
+  patterns=patterns.map(pat=>{
+    const newRows=[];
+    for(let r=0;r<nRows;r++){
+      if(pat.rows[r]) newRows.push([...pat.rows[r]]);
+      else { const row=[]; for(let s=0;s<N_STEPS;s++) row.push(Math.random()<0.2); newRows.push(row); }
+    }
+    return {rows:newRows, bpm:pat.bpm};
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  GENETIC ALGORITHM
+// ═══════════════════════════════════════════════
+function evolve(){
+  const elites=selected.map((s,i)=>s?i:-1).filter(i=>i>=0);
+  const nRows=KITS[currentKit].rows.length;
+
+  if(elites.length===0){
+    initPatterns(); selected.fill(false); generation++;
+    stopIfNeeded(); renderAll(); glitch();
+    setStatus('RANDOMIZED',false); return;
+  }
+
+  const newPats=patterns.map(p=>({rows:p.rows.map(r=>[...r]),bpm:p.bpm}));
+
+  for(let i=0;i<N_PATTERNS;i++){
+    if(selected[i]) continue;
+    const p1=elites[Math.floor(Math.random()*elites.length)];
+    const p2=elites[Math.floor(Math.random()*elites.length)];
+    const cp=Math.floor(Math.random()*(N_STEPS-1));
+    const childRows=[];
+    for(let r=0;r<nRows;r++){
+      const row=[];
+      for(let s=0;s<N_STEPS;s++){
+        let g=s<=cp?patterns[p1].rows[r][s]:patterns[p2].rows[r][s];
+        if(Math.random()<1.0/N_STEPS) g=!g;
+        row.push(g);
+      }
+      childRows.push(row);
+    }
+    const b1=patterns[p1].bpm, b2=patterns[p2].bpm;
+    let bpm=Math.min(b1,b2)+Math.floor(Math.random()*(Math.abs(b1-b2)+1));
+    bpm+=Math.floor(Math.random()*40)-20;
+    newPats[i]={rows:childRows, bpm:Math.max(60,Math.min(220,bpm))};
+  }
+
+  patterns=newPats; selected.fill(false); generation++;
+  stopIfNeeded(); renderAll(); glitch();
+  setStatus(`GEN ${String(generation).padStart(3,'0')} EVOLVED`,false);
+}
+
+function randomizeAll(){
+  initPatterns(); selected.fill(false); generation=1;
+  stopIfNeeded(); renderAll(); glitch();
+  setStatus('RANDOMIZED',false);
+}
+
+function stopIfNeeded(){ if(isPlaying){stopSequencer();currentPlay=-1;} }
+
+// ═══════════════════════════════════════════════
+//  KIT SWITCH
+// ═══════════════════════════════════════════════
+function switchKit(kitId,btn){
+  if(kitId===currentKit) return;
+  stopIfNeeded(); currentKit=kitId;
+  document.body.classList.remove('kit-techno','kit-african','kit-latin','kit-asian','kit-middleeast');
+  document.body.classList.add('kit-'+kitId);
+  document.querySelectorAll('.kit-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  adaptPatternsToKit(); selected.fill(false);
+  renderAll();
+  setStatus(`KIT: ${KITS[kitId].name}`,false);
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════
+const COLORS=['#ff3c5a','#00e5ff','#ffe600','#39ff14','#ff6b35','#c77dff'];
+
+function renderAll(){
+  document.getElementById('genBadge').textContent=`GEN ${String(generation).padStart(3,'0')}`;
+  const grid=document.getElementById('mainGrid');
+  grid.innerHTML='';
+  for(let i=0;i<N_PATTERNS;i++) renderCard(i,grid);
+  updateSelCount();
+}
+
+function renderCard(idx,container){
+  const pat=patterns[idx];
+  const kit=KITS[currentKit];
+  const isSel=selected[idx], isActive=currentPlay===idx;
+
+  const card=document.createElement('div');
+  card.className=`card${isSel?' selected':''}${isActive?' playing':''}`;
+  card.dataset.idx=idx;
+
+  // header
+  const hdr=document.createElement('div');
+  hdr.className='card-header';
+
+  const pid=document.createElement('div');
+  pid.className='pattern-id';
+  pid.style.color=COLORS[idx];
+  pid.style.textShadow=`0 0 12px ${COLORS[idx]}55`;
+  pid.textContent=`PATTERN ${idx+1}`;
+  hdr.appendChild(pid);
+
+  const ctrl=document.createElement('div');
+  ctrl.className='card-controls';
+
+  // play button
+  const playBtn=document.createElement('button');
+  playBtn.className=`btn-play${isActive?' active':''}`;
+  playBtn.title='Play';
+  playBtn.onclick=async()=>{
+    await initAudio();
+    if(currentPlay===idx&&isPlaying){
+      stopSequencer(); currentPlay=-1;
+      document.querySelectorAll('.card').forEach(c=>c.classList.remove('playing'));
+      document.querySelectorAll('.btn-play').forEach(b=>b.classList.remove('active'));
+      setStatus('STOPPED',false);
+    } else {
+      document.querySelectorAll('.card').forEach(c=>c.classList.remove('playing'));
+      document.querySelectorAll('.btn-play').forEach(b=>b.classList.remove('active'));
+      card.classList.add('playing'); playBtn.classList.add('active');
+      startSequencer(idx);
+    }
+  };
+  ctrl.appendChild(playBtn);
+
+  // select button
+  const selBtn=document.createElement('button');
+  selBtn.className=`btn-select${isSel?' checked':''}`;
+  selBtn.textContent='★'; selBtn.title='Select as parent';
+  selBtn.onclick=()=>{
+    selected[idx]=!selected[idx];
+    selBtn.classList.toggle('checked',selected[idx]);
+    card.classList.toggle('selected',selected[idx]);
+    updateSelCount();
+  };
+  ctrl.appendChild(selBtn);
+  hdr.appendChild(ctrl);
+  card.appendChild(hdr);
+
+  // beat numbers
+  const beatNums=document.createElement('div');
+  beatNums.className='beat-nums';
+  beatNums.appendChild(document.createElement('div'));
+  for(let s=0;s<N_STEPS;s++){
+    const n=document.createElement('div');
+    n.className=`beat-num${s%4===0?' q':''}`;
+    n.textContent=s%4===0?(s/4+1):'';
+    beatNums.appendChild(n);
+  }
+  card.appendChild(beatNums);
+
+  // step rows
+  kit.rows.forEach((rowDef,ri)=>{
+    const rowEl=document.createElement('div');
+    rowEl.className='step-grid';
+    const lbl=document.createElement('div');
+    lbl.className='row-label'; lbl.textContent=rowDef.label;
+    rowEl.appendChild(lbl);
+    for(let s=0;s<N_STEPS;s++){
+      const step=document.createElement('button');
+      step.className=`step${pat.rows[ri][s]?' on':''}`;
+      step.style.setProperty('--row-color',rowDef.color);
+      step.onclick=()=>{
+        pat.rows[ri][s]=!pat.rows[ri][s];
+        step.classList.toggle('on',pat.rows[ri][s]);
+      };
+      rowEl.appendChild(step);
+    }
+    card.appendChild(rowEl);
+  });
+
+  // BPM slider
+  const bpmRow=document.createElement('div');
+  bpmRow.className='bpm-row';
+  const bpmLbl=document.createElement('div');
+  bpmLbl.className='bpm-label'; bpmLbl.textContent='BPM';
+  const slider=document.createElement('input');
+  slider.type='range'; slider.min=60; slider.max=220; slider.value=pat.bpm;
+  const bpmVal=document.createElement('div');
+  bpmVal.className='bpm-val'; bpmVal.textContent=pat.bpm;
+  slider.oninput=()=>{ pat.bpm=parseInt(slider.value); bpmVal.textContent=pat.bpm; };
+  bpmRow.appendChild(bpmLbl); bpmRow.appendChild(slider); bpmRow.appendChild(bpmVal);
+  card.appendChild(bpmRow);
+
+  container.appendChild(card);
+}
+
+function updateSelCount(){
+  const n=selected.filter(Boolean).length;
+  document.getElementById('selCount').textContent=n;
+  document.getElementById('btnEvolve').textContent=n===0?'▶ RANDOMIZE':'▶ EVOLVE';
+}
+function setStatus(msg,warn){
+  const el=document.getElementById('statusText');
+  el.textContent=msg; el.className='status-text'+(warn?' warn':'');
+}
+function glitch(){
+  const l=document.querySelector('.logo');
+  l.classList.add('glitching');
+  setTimeout(()=>l.classList.remove('glitching'),340);
+}
+
+// ═══════════════════════════════════════════════
+//  HELP MODAL
+// ═══════════════════════════════════════════════
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  // Swap body lang class (keep other classes intact)
+  document.body.classList.remove('lang-ja', 'lang-en');
+  document.body.classList.add('lang-' + lang);
+  // Update toggle button states
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  // Reset modal scroll to top on lang switch
+  document.getElementById('helpModal').scrollTop = 0;
+}
+
+function openHelp(){
+  document.getElementById('helpOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeHelp(){
+  document.getElementById('helpOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+function handleOverlayClick(e){
+  if(e.target===document.getElementById('helpOverlay')) closeHelp();
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeHelp(); });
+
+// ── Boot ───────────────────────────────────────
+initPatterns();
+renderAll();
+setStatus('CLICK ▶ TO PLAY',false);
+</script>
+</body>
+</html>
