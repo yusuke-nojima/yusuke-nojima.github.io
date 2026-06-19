@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hopper EC</title>
+<style>
+  :root{
+    --bg:#0b0f16; --panel:#121a26; --panel-2:#19222f; --line:#26323f;
+    --ink:#e9eef5; --muted:#7c8a9c;
+    --accent:#f472b6;   /* magenta — multi-objective */
+    --front:#f472b6; --dom:#3a4759;
+    --pos:#54d6a0; --neg:#ff6b6b;
+    --header-bg1:#0f1825; --header-bg2:#0b0f16;
+    --panel-glass:rgba(18,26,38,.86); --live-glass:rgba(18,26,38,.70); --tuner-glass:rgba(18,26,38,.94);
+    --button-primary-text:#1a0a12; --option-bg:#121a26;
+    color-scheme:dark;
+  }
+  body.light{
+    --bg:#f7f9fc; --panel:#ffffff; --panel-2:#edf2f7; --line:#ccd6e3;
+    --ink:#142033; --muted:#5d6b7c;
+    --accent:#c02675; --front:#c02675; --dom:#a8b3c2;
+    --pos:#16825d; --neg:#d23d3d;
+    --header-bg1:#ffffff; --header-bg2:#eef3f9;
+    --panel-glass:rgba(255,255,255,.88); --live-glass:rgba(255,255,255,.78); --tuner-glass:rgba(255,255,255,.96);
+    --button-primary-text:#ffffff; --option-bg:#ffffff;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"DM Sans",system-ui,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+  .mono{font-family:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace}
+  .stage{position:fixed;inset:0;display:flex;flex-direction:column}
+  header{display:flex;align-items:baseline;gap:14px;padding:14px 20px;
+    border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--header-bg1),var(--header-bg2));flex:0 0 auto}
+  header h1{font-size:15px;margin:0;letter-spacing:.04em;font-weight:600}
+  header .tag{font-size:10.5px;color:var(--accent);border:1px solid var(--line);
+    padding:2px 8px;border-radius:999px;letter-spacing:.1em;text-transform:uppercase}
+  header .src{margin-left:auto;font-size:11px;color:var(--muted)}
+  header .src a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--line)}
+  main{flex:1 1 auto;position:relative;min-height:0}
+  canvas#c{display:block;width:100%;height:100%}
+
+  .panel{position:absolute;top:16px;left:16px;width:292px;
+    background:var(--panel-glass);backdrop-filter:blur(8px);
+    border:1px solid var(--line);border-radius:12px;padding:14px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .k{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .v{font-size:20px;font-weight:600}
+  .v.small{font-size:13px;font-weight:500}
+  .v.acc{color:var(--accent)}
+  .hr{height:1px;background:var(--line);margin:11px -14px}
+  .sub{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 7px;
+    display:flex;justify-content:space-between}
+  .progress{height:6px;background:var(--panel-2);border-radius:4px;overflow:hidden;margin-top:2px}
+  .progress > div{height:100%;width:0;background:var(--accent);transition:width .08s linear}
+  .chart{width:100%;display:block;background:var(--panel-2);border-radius:8px;margin-top:4px}
+  .legend{display:flex;gap:11px;font-size:9.5px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .legend i.line{height:3px;border-radius:2px}
+  .btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{font:inherit;font-size:12px;color:var(--ink);cursor:pointer;flex:1 1 auto;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;letter-spacing:.02em}
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.primary{background:var(--accent);color:var(--button-primary-text);border-color:var(--accent);font-weight:600}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  select{width:100%;font:inherit;font-size:12px;color:var(--ink);background:var(--panel-2);
+    border:1px solid var(--line);border-radius:8px;padding:8px 9px;outline:none}
+  select:hover,select:focus{border-color:var(--accent)}
+  option{background:var(--option-bg);color:var(--ink)}
+
+  .liveTag{position:absolute;top:16px;right:16px;
+    background:var(--live-glass);border:1px solid var(--line);border-radius:10px;
+    padding:9px 13px;font-size:11px;color:var(--muted);line-height:1.7;width:182px}
+  .liveTag b{color:var(--ink)} .liveTag .big{font-size:17px;color:var(--accent);font-weight:600}
+  @media (max-width:780px){.panel{width:230px;padding:11px}.liveTag{display:none}}
+  .tuner{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+    background:var(--tuner-glass);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;display:none;z-index:6;max-width:94vw}
+  .tuner.show{display:block}
+  .tuner h4{margin:0 0 9px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .tuner .grid{display:flex;flex-direction:column;gap:7px}
+  .tuner .jrow{display:flex;align-items:center;gap:10px}
+  .tuner .jlab{width:46px;font-size:11px;color:var(--ink);font-weight:600;text-align:right}
+  .tuner .cells{display:flex;gap:7px}
+  .tuner .cell{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .tuner .cell input[type=range]{writing-mode:vertical-lr;direction:rtl;width:20px;height:54px;accent-color:var(--accent)}
+  .tuner .cell span{font-size:8px;color:var(--muted)}
+  .tuner .foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:14px}
+  .tuner .foot .hint{font-size:10.5px;color:var(--muted)}
+  .tuner .foot button{flex:0 0 auto;font:inherit;font-size:12px;color:var(--ink);cursor:pointer;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+  .tuner .foot button:hover{border-color:var(--accent);color:var(--accent)}
+  .liveTag .ag{display:flex;align-items:center;gap:7px;margin-bottom:4px;font-size:11px;color:var(--muted)}
+  .liveTag .ag .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
+  .liveTag .ag b{margin-left:auto;color:var(--ink);font-weight:600}
+
+  .themeSwitch{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);user-select:none;white-space:nowrap}
+  .themeSwitch input{appearance:none;width:34px;height:18px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);position:relative;cursor:pointer;vertical-align:middle}
+  .themeSwitch input::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:left .16s,background .16s}
+  .themeSwitch input:checked{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--panel-2))}
+  .themeSwitch input:checked::after{left:18px;background:var(--accent)}
+  body.light canvas.chart{background:#edf2f7}
+</style>
+</head>
+<body>
+<div class="stage">
+  <header>
+    <h1>Hopper EC</h1>
+    <span class="tag" id="modeTag">Single objective</span>
+    <label class="themeSwitch"><input type="checkbox" id="themeToggle" aria-label="Toggle light theme"><span id="themeLabel">Dark</span></label>
+    <span class="src">model:&nbsp;<a href="https://gymnasium.farama.org/environments/mujoco/hopper/" target="_blank" rel="noopener">Gymnasium / MuJoCo</a></span>
+  </header>
+
+  <main>
+    <canvas id="c"></canvas>
+
+    <div class="panel mono">
+      <div class="row"><span class="k">generation</span><span class="v" id="gen">0</span></div>
+      <div class="row"><span class="k">best jump (f1↑)</span><span class="v acc" id="bestJump">0.00<span style="font-size:11px;color:var(--muted)"> m</span></span></div>
+      <div class="row" id="bestF2Row"><span class="k" id="bestF2Label">best spin (f2↑)</span><span class="v small" id="bestLat">0.00 rev</span></div>
+
+      <div class="sub" style="margin-top:10px"><span>Evaluating population</span><span id="popinfo">n=100</span></div>
+      <div class="progress"><div id="evalBar"></div></div>
+
+      <div class="sub" style="margin-top:10px"><span>Second objective</span><span id="f2Hint">single objective</span></div>
+      <select id="f2Mode" aria-label="Second objective">
+        <option value="single">None (Single objective)</option>
+        <option value="crouchTakeoffSpeed">Maximize crouching + takeoff speed</option>
+        <option value="forwardDist">Maximize forward distance</option>
+        <option value="rotMax">Maximize rotation count</option>
+      </select>
+
+      <div class="hr"></div>
+      <div class="sub"><span id="paretoTitle">Objective space / Pareto front</span></div>
+      <canvas class="chart" id="pareto" style="height:120px"></canvas>
+      <div class="legend">
+        <span><i style="background:#7d8ba0"></i><span id="paretoLegendA">selected / front</span></span>
+        <span><i style="background:#33414f"></i><span id="paretoLegendB">others</span></span>
+        <span id="paretoLegendC" style="color:var(--ink)">◎ = shown agents</span>
+      </div>
+
+      <div class="hr"></div>
+      <div class="sub"><span id="convTitle">best height / best spin (gen)</span></div>
+      <canvas class="chart" id="conv" style="height:54px"></canvas>
+      <div class="legend">
+        <span><i class="line" style="background:#f472b6"></i>best height</span>
+        <span id="convF2Item"><i class="line" style="background:#ffb454"></i><span id="convF2Legend">second objective</span></span>
+      </div>
+
+      <div class="hr"></div>
+      <div class="sub"><span>f1-best motor program</span></div>
+      <canvas class="chart" id="motor" style="height:52px"></canvas>
+      <div class="legend">
+        <span><i class="line" style="background:#f472b6"></i>hip</span>
+        <span><i class="line" style="background:#ffb454"></i>knee</span>
+        <span><i class="line" style="background:#2dd4a7"></i>ankle</span>
+      </div>
+
+      <div class="btns">
+        <button class="primary" id="run">Start optimization</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="btns">
+        <button id="tune">Manual tuning</button>
+        <button id="dl">Save best</button>
+      </div>
+    </div>
+
+    <div class="liveTag mono">
+      <div id="replayTitle" style="margin-bottom:7px;color:var(--muted)">Replaying 3 agents</div>
+      <div class="ag"><span class="dot" style="background:#f472b6"></span>F1 height <b id="liveF1">—</b></div>
+      <div class="ag" id="liveF2Row"><span class="dot" style="background:#ffb454"></span><span id="liveF2Label">F2 spin</span> <b id="liveF2">—</b></div>
+      <div class="ag" id="liveMidRow"><span class="dot" style="background:#46d3e0"></span><span id="liveMidLabel">Mid</span> <b id="liveMid">—</b></div>
+      <div style="margin-top:7px"><b id="evoStatus">Idle</b></div>
+    </div>
+    <div class="tuner mono" id="tuner">
+      <h4>≡ Manual tuning — torque control points · drag to move</h4>
+      <div class="grid" id="tunerGrid"></div>
+      <div class="foot">
+        <span class="hint">Drag the bars; the Hopper replays your controller live.</span>
+        <button id="tunerReset">Reset to best</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/planck-js@0.3.30/dist/planck.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  if(typeof planck==="undefined"){
+    document.body.insertAdjacentHTML("beforeend",
+      '<div style="position:fixed;inset:0;display:grid;place-items:center;color:#ff6b6b;font-family:monospace;padding:24px;text-align:center">Failed to load the physics engine (planck-js).<br>Please check your network connection.</div>');
+    return;
+  }
+  const pl=planck, Vec2=pl.Vec2;
+
+  // ===== Hopper physics ==================================================
+  const DENSITY=40,TORSO_DENSITY=58,FOOT_FRICTION=2.0,GROUND_FRICTION=1.0;
+  const LIMB_DAMP=1.2,TORSO_DAMP=0.6,TH=0.062,DT=1/60;
+  function buildHopper(){
+    const world=new pl.World(Vec2(0,-9.81));
+    const ground=world.createBody();
+    ground.createFixture(pl.Edge(Vec2(-50,0),Vec2(400,0)),{friction:GROUND_FRICTION});
+    const torso=world.createBody({type:"dynamic",position:Vec2(0,1.25),angle:0,angularDamping:TORSO_DAMP});
+    torso.createFixture({shape:pl.Box(0.05,0.20),density:TORSO_DENSITY,friction:0.5});
+    const draw=[{body:torso,w:0.10,h:0.40,color:"#d4dde8",torso:true}], joints=[];
+    function seg(parent,anchor,angle,len,lim,color){
+      const body=world.createBody({type:"dynamic",
+        position:Vec2(anchor.x+len/2*Math.cos(angle),anchor.y+len/2*Math.sin(angle)),angle,angularDamping:LIMB_DAMP});
+      body.createFixture({shape:pl.Box(len/2,TH/2),density:DENSITY,friction:FOOT_FRICTION});
+      world.createJoint(pl.RevoluteJoint({enableLimit:true,lowerAngle:lim[0],upperAngle:lim[1],
+        referenceAngle:body.getAngle()-parent.getAngle()},parent,body,anchor));
+      joints.push({parent,child:body}); draw.push({body,w:len,h:TH,color}); return body;
+    }
+    const thigh=seg(torso,Vec2(0,1.05),-Math.PI/2,0.45,[-2.618,0],"#a6b6c9");
+    const leg=seg(thigh,Vec2(0,0.60),-Math.PI/2,0.50,[-2.618,0],"#a6b6c9");
+    const foot=world.createBody({type:"dynamic",position:Vec2(-0.13+0.39/2,0.10),angle:0,angularDamping:LIMB_DAMP});
+    foot.createFixture({shape:pl.Box(0.39/2,TH/2),density:DENSITY,friction:FOOT_FRICTION});
+    world.createJoint(pl.RevoluteJoint({enableLimit:true,lowerAngle:-0.785,upperAngle:0.785,
+      referenceAngle:foot.getAngle()-leg.getAngle()},leg,foot,Vec2(0,0.10)));
+    joints.push({parent:leg,child:foot}); draw.push({body:foot,w:0.39,h:TH,color:"#3fd0d6"});
+    return {world,torso,joints,draw,foot,ground};
+  }
+  function footGrounded(world,foot,ground){
+    if(world.getContactList){
+      for(let c=world.getContactList(); c; c=c.getNext()){
+        if(c.isTouching && !c.isTouching()) continue;
+        const a=c.getFixtureA().getBody(), b=c.getFixtureB().getBody();
+        if((a===foot&&b===ground)||(a===ground&&b===foot)) return true;
+      }
+      return false;
+    }
+    return foot.getPosition().y < 0.12; // fallback
+  }
+
+  // ===== controller + two objectives ====================================
+  const K=10, GENES=3*K, EP_STEPS=150, BASE_TORQUE=42, UPRIGHT=0.9, N=GENES;
+  function actionAt(cp,t){ const phase=t/(EP_STEPS-1)*(K-1), i=Math.min(Math.floor(phase),K-2), f=phase-i, a=[0,0,0];
+    for(let j=0;j<3;j++){ const o=j*K; a[j]=cp[o+i]*(1-f)+cp[o+i+1]*f; } return a; }
+  const decode=x=>{ const cp=new Float64Array(N); for(let i=0;i<N;i++) cp[i]=Math.tanh(x[i]); return cp; };
+  const gauss=()=>{ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  let REST_Y=1.25;
+  (function(){ const h=buildHopper(); for(let t=0;t<45;t++) h.world.step(DT,8,3); REST_Y=h.torso.getPosition().y; })();
+
+  // f1 = peak height (maximize). f2 is optional.
+  // In single-objective mode, survival selection still uses the same (parents + offspring)
+  // merged pool as NSGA-II, but ranks individuals only by f1.
+  const CROUCH_DROP=0.035; // minimum torso drop required before takeoff velocity is rewarded
+  let f2Mode="single";
+  const F2_OBJECTIVES={
+    single:{
+      label:"second objective", hint:"height only", axis:"height rank →", live:"2nd height", conv:"single objective",
+      save:null, valueName:"none", score:m=>0, value:m=>0, format:v=>"None"
+    },
+    crouchTakeoffSpeed:{
+      label:"crouch+takeoff (f2↑)", hint:"maximize crouch & takeoff", axis:"crouch+takeoff →", live:"F2 crouch+takeoff", conv:"best crouch+takeoff",
+      save:"balanced_crouching_and_takeoff_speed (max)", valueName:"crouchTakeoffSpeed",
+      score:m=>m.crouchTakeoffSpeed, value:m=>m.crouchTakeoffSpeed, format:v=>v.toFixed(2)+" m/s"
+    },
+    forwardDist:{
+      label:"forward dist (f2↑)", hint:"maximize forward distance", axis:"forward dist →", live:"F2 forward", conv:"best forward",
+      save:"forward_displacement (max)", valueName:"forwardDist",
+      score:m=>m.forwardDist, value:m=>m.forwardDist, format:v=>v.toFixed(2)+" m"
+    },
+    rotMax:{
+      label:"best spin (f2↑)", hint:"maximize spin", axis:"spin →", live:"F2 spin", conv:"best spin",
+      save:"body_rotation_revolutions (max)", valueName:"rotationRev",
+      score:m=>m.rotRev, value:m=>m.rotRev, format:v=>v.toFixed(2)+" rev"
+    }
+  };
+  const isSingleObjective=()=>f2Mode==="single";
+  const f2Cfg=()=>F2_OBJECTIVES[f2Mode]||F2_OBJECTIVES.single;
+  const fmtF2=v=>isSingleObjective()?"None":(Number.isFinite(v)?f2Cfg().format(v):f2Cfg().format(0));
+
+  function makeMetricState(h,forReplay=false){
+    const p=h.torso.getPosition(), y=p.y;
+    const grounded=footGrounded(h.world,h.foot,h.ground);
+    return {peak:forReplay?REST_Y:0, rot:0, prevA:h.torso.getAngle(), minGroundY:y,
+      startX:p.x, maxForwardX:0, crouchSpeed:0, preTakeoff:true,
+      hadCrouch:false, wasGrounded:grounded,
+      takeoffVy:0, maxRiseVy:0, takeoffFound:false};
+  }
+  function updateMetricState(s,h){
+    const tj=h.torso, p=tj.getPosition(), y=p.y, x=p.x, ang=tj.getAngle(), vy=tj.getLinearVelocity().y;
+    if(Math.abs(ang)<UPRIGHT && y>s.peak) s.peak=y;
+    if(x-s.startX>s.maxForwardX) s.maxForwardX=x-s.startX;
+    let dA=ang-s.prevA; if(dA>Math.PI) dA-=2*Math.PI; else if(dA<-Math.PI) dA+=2*Math.PI;
+    s.rot+=dA; s.prevA=ang;
+    const grounded=footGrounded(h.world,h.foot,h.ground);
+    if(grounded && s.preTakeoff){
+      if(y<s.minGroundY) s.minGroundY=y;
+      if(Math.abs(ang)<UPRIGHT && vy<0 && y<=REST_Y+0.04) s.crouchSpeed=Math.max(s.crouchSpeed,-vy);
+      if(s.minGroundY<REST_Y-CROUCH_DROP) s.hadCrouch=true;
+      if(s.hadCrouch && vy>s.maxRiseVy) s.maxRiseVy=vy;
+    }
+    if(s.wasGrounded && !grounded){
+      if(s.hadCrouch && !s.takeoffFound){ s.takeoffVy=Math.max(0,vy); s.takeoffFound=true; }
+      s.preTakeoff=false;
+    }
+    s.wasGrounded=grounded;
+  }
+  function finishMetrics(s){
+    const takeoffVy=s.hadCrouch?(s.takeoffFound?s.takeoffVy:Math.max(0,s.maxRiseVy)):0;
+    const crouchTakeoffSpeed=Math.sqrt(Math.max(0,s.crouchSpeed)*Math.max(0,takeoffVy));
+    return {peak:s.peak, rotRev:Math.abs(s.rot)/(2*Math.PI), takeoffVy,
+      crouchSpeed:s.crouchSpeed, crouchTakeoffSpeed, forwardDist:Math.max(0,s.maxForwardX),
+      sinkDepth:Math.max(0,REST_Y-s.minGroundY), crouched:s.hadCrouch};
+  }
+  function evalMetrics(cp){
+    const h=buildHopper(), J=h.joints, stats=makeMetricState(h,false);
+    for(let t=0;t<EP_STEPS;t++){
+      const a=actionAt(cp,t);
+      for(let j=0;j<3;j++){ const tq=a[j]*BASE_TORQUE; if(tq){ J[j].child.applyTorque(tq,true); J[j].parent.applyTorque(-tq,true); } }
+      h.world.step(DT,8,3); updateMetricState(stats,h);
+      if(h.torso.getPosition().y<0.25) break;
+    }
+    return finishMetrics(stats);
+  }
+  function evalObjectives(cp){
+    const metrics=evalMetrics(cp);
+    if(isSingleObjective()) return {f1:metrics.peak, f2:0, f2Raw:0, metrics};
+    const cfg=f2Cfg(), raw=cfg.value(metrics);
+    return {f1:metrics.peak, f2:cfg.score(metrics), f2Raw:raw, metrics};
+  }
+
+  // ===== NSGA-II =========================================================
+  const POP=100, TOURN=2, MUT_RATE=0.20, GENOMES_PER_FRAME=8;
+  const gaSigma=g=>Math.max(0.12, 0.55*Math.pow(0.992,g));
+  let pop=[], offspring=[], stage="init", idx=0, gen=0, running=false;
+  let bestX=null, bestF1=0, bestF2=-Infinity, bestF2Raw=0;
+  let cpF1=null, cpF2=null, cpMid=null;
+  const jumpHist=[], spinHist=[];
+  const TH_F1={main:"#f472b6",torso:"#ffc4e3"}, TH_F2={main:"#ffb454",torso:"#ffe2b3"}, TH_MID={main:"#46d3e0",torso:"#c2f1f6"}, TH_MAN={main:"#9b7bff",torso:"#d9caff"};
+
+  const randInd=()=>{ const x=new Float64Array(N); for(let i=0;i<N;i++) x[i]=gauss(); return {x,f1:0,f2:0,f2Raw:0,rank:0,crowd:0}; };
+  function initNSGA(){ pop=[]; for(let i=0;i<POP;i++) pop.push(randInd()); offspring=[]; stage="init"; idx=0; }
+
+  function dominates(a,b){
+    if(isSingleObjective()) return a.f1>=b.f1 && a.f1>b.f1;
+    return (a.f1>=b.f1 && a.f2>=b.f2) && (a.f1>b.f1 || a.f2>b.f2);
+  }
+  function fastNonDominatedSort(P){
+    for(const p of P){ p._S=[]; p._n=0; }
+    const F=[[]];
+    for(let i=0;i<P.length;i++){ const p=P[i];
+      for(let j=0;j<P.length;j++){ if(i===j) continue; const q=P[j];
+        if(dominates(p,q)) p._S.push(q); else if(dominates(q,p)) p._n++; }
+      if(p._n===0){ p.rank=0; F[0].push(p); } }
+    let i=0;
+    while(F[i].length){ const next=[];
+      for(const p of F[i]) for(const q of p._S){ if(--q._n===0){ q.rank=i+1; next.push(q); } }
+      i++; F.push(next); }
+    F.pop(); return F;
+  }
+  function crowdingDistance(F){
+    const l=F.length; if(!l) return;
+    for(const p of F) p.crowd=0;
+    for(const key of ["f1","f2"]){
+      F.sort((a,b)=>a[key]-b[key]);
+      const mn=F[0][key], mx=F[l-1][key], range=(mx-mn)||1e-12;
+      F[0].crowd=Infinity; F[l-1].crowd=Infinity;
+      for(let i=1;i<l-1;i++) F[i].crowd += (F[i+1][key]-F[i-1][key])/range;
+    }
+  }
+  function assignSingleObjectiveRanks(P){
+    const order=P.slice().sort((a,b)=>b.f1-a.f1);
+    for(let i=0;i<order.length;i++){ order[i].rank=i; order[i].crowd=i===0?Infinity:0; }
+  }
+  function prepareSelectionInfo(P){
+    if(isSingleObjective()){ assignSingleObjectiveRanks(P); return; }
+    const fronts=fastNonDominatedSort(P); for(const f of fronts) crowdingDistance(f);
+  }
+  function selectNext(R){
+    if(isSingleObjective()){
+      const order=R.slice().sort((a,b)=>b.f1-a.f1);
+      const next=order.slice(0,POP);
+      assignSingleObjectiveRanks(next);
+      return next;
+    }
+    const fronts=fastNonDominatedSort(R), next=[];
+    for(const f of fronts){
+      crowdingDistance(f);
+      if(next.length+f.length<=POP){ for(const p of f) next.push(p); }
+      else { f.sort((a,b)=>b.crowd-a.crowd); const need=POP-next.length; for(let i=0;i<need;i++) next.push(f[i]); break; }
+      if(next.length>=POP) break;
+    }
+    return next;
+  }
+  const crowdedBetter=(a,b)=> isSingleObjective() ? (a.f1>b.f1 || (a.f1===b.f1 && a.crowd>b.crowd)) : (a.rank<b.rank || (a.rank===b.rank && a.crowd>b.crowd));
+  function tourSelect(){ let best=pop[Math.floor(Math.random()*POP)];
+    for(let k=1;k<TOURN;k++){ const c=pop[Math.floor(Math.random()*POP)]; if(crowdedBetter(c,best)) best=c; } return best; }
+  function generateOffspring(sigma){
+    offspring=[];
+    for(let k=0;k<POP;k++){ const p1=tourSelect(),p2=tourSelect(),x=new Float64Array(N);
+      for(let i=0;i<N;i++){ x[i]=Math.random()<0.5?p1.x[i]:p2.x[i]; if(Math.random()<MUT_RATE) x[i]+=gauss()*sigma; }
+      offspring.push({x,f1:0,f2:0,f2Raw:0,rank:0,crowd:0}); }
+    stage="child"; idx=0;
+  }
+
+  function trackBest(ind){
+    if(ind.f1>bestF1){ bestF1=ind.f1; bestX=Float64Array.from(ind.x); }
+    if(!isSingleObjective() && ind.f2>bestF2){ bestF2=ind.f2; bestF2Raw=ind.f2Raw; }
+  }
+  function pickThree(){
+    if(isSingleObjective()){
+      const order=pop.slice().sort((a,b)=>b.f1-a.f1);
+      const p1=order[0]||pop[0];
+      cpF1=p1?decode(p1.x):null; cpF2=null; cpMid=null; return;
+    }
+    let p1=pop[0], p2=pop[0]; for(const p of pop){ if(p.f1>p1.f1)p1=p; if(p.f2>p2.f2)p2=p; }
+    const front0=pop.filter(p=>p.rank===0).sort((a,b)=>a.f1-b.f1);
+    const pm=front0.length?front0[Math.floor(front0.length/2)]:p1;
+    cpF1=decode(p1.x); cpF2=decode(p2.x); cpMid=decode(pm.x);
+  }
+  function recordStats(){
+    let b1=-Infinity,b2=-Infinity,b2Raw=0;
+    for(const p of pop){ if(p.f1>b1)b1=p.f1; if(!isSingleObjective() && p.f2>b2){ b2=p.f2; b2Raw=p.f2Raw; } }
+    jumpHist.push(b1); spinHist.push(isSingleObjective()?0:b2Raw); pickThree(); drawMotor();
+  }
+  function afterInit(){
+    prepareSelectionInfo(pop);
+    recordStats(); gen++; generateOffspring(gaSigma(gen)); drawAll(); updateHUD();
+  }
+  function afterChildren(){
+    pop=selectNext(pop.concat(offspring));
+    recordStats(); gen++; generateOffspring(gaSigma(gen)); drawAll(); updateHUD();
+  }
+  function optTick(){
+    if(!running) return;
+    for(let c=0;c<GENOMES_PER_FRAME;c++){
+      if(stage==="init"){
+        if(idx>=POP){ afterInit(); break; }
+        const o=evalObjectives(decode(pop[idx].x)); pop[idx].f1=o.f1; pop[idx].f2=o.f2; pop[idx].f2Raw=o.f2Raw; trackBest(pop[idx]); idx++;
+      } else {
+        if(idx>=POP){ afterChildren(); break; }
+        const o=evalObjectives(decode(offspring[idx].x)); offspring[idx].f1=o.f1; offspring[idx].f2=o.f2; offspring[idx].f2Raw=o.f2Raw; trackBest(offspring[idx]); idx++;
+      }
+    }
+  }
+
+  // ===== live replay of selected individuals ==============================
+  let agents=[], rStep=0, rHold=0;
+  function makeAgent(cp,theme,label){ const h=buildHopper(); return {h,theme,label,cp:cp?Float64Array.from(cp):new Float64Array(N),stats:makeMetricState(h,true)}; }
+  function agentMetrics(ag){ return finishMetrics(ag.stats); }
+  function agentF2Value(ag){ return f2Cfg().value(agentMetrics(ag)); }
+  function startReplay(){
+    rStep=0; rHold=0;
+    if(manualMode){ agents=[ makeAgent(manualCP,TH_MAN,"Manual") ]; }
+    else if(isSingleObjective()){ agents=[ makeAgent(cpF1,TH_F1,"F1-best") ]; }
+    else { agents=[ makeAgent(cpF1,TH_F1,"F1"), makeAgent(cpF2,TH_F2,"F2"), makeAgent(cpMid,TH_MID,"Mid") ]; }
+  }
+  function replayTick(){
+    if(!agents.length) startReplay();
+    if(rStep<EP_STEPS){
+      for(const ag of agents){ const a=actionAt(ag.cp,rStep), J=ag.h.joints;
+        for(let j=0;j<3;j++){ const tq=a[j]*BASE_TORQUE; if(tq){ J[j].child.applyTorque(tq,true); J[j].parent.applyTorque(-tq,true); } }
+        ag.h.world.step(DT,8,3); updateMetricState(ag.stats,ag.h);
+      }
+      rStep++;
+    } else { for(const ag of agents) ag.h.world.step(DT,8,3); rHold++; if(rHold>55) startReplay(); }
+  }
+
+  // ===== rendering =======================================================
+  const canvas=document.getElementById("c"), ctx=canvas.getContext("2d");
+  let W=0,H=0,DPR=1,scale=150,cam=0;
+  function resize(){ DPR=Math.min(devicePixelRatio||1,2);
+    const r=canvas.getBoundingClientRect(); W=r.width; H=r.height; canvas.width=W*DPR; canvas.height=H*DPR;
+    scale=Math.max(95,Math.min(180,H/4.6)); }
+  addEventListener("resize",resize);
+  function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);
+    c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+  function cssVar(name){ return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+  function isLightTheme(){ return document.body.classList.contains("light"); }
+  function canvasTheme(){
+    if(isLightTheme()){
+      return {
+        skyTop:"#ffffff", skyBottom:"#eaf1f8",
+        ground:"#eef3f8", groundLine:"#c5d0dc", grid:"#d9e2ec", tickText:"#6b7788",
+        mountain1:"#b8c8d9", mountain2:"#d0dbea", axis:"rgba(94,107,124,.58)",
+        startLine:"rgba(192,38,117,.35)", tickLine:"rgba(94,107,124,.20)",
+        startText:"rgba(192,38,117,.78)", tickLabel:"rgba(94,107,124,.60)", eye:"#ffffff",
+        chartText:"#5d6b7c", chartGrid:"#ccd6e3", pointFront:"#7b8798", pointDom:"#b7c2cf", markStroke:"#ffffff", waitText:"#798697"
+      };
+    }
+    return {
+      skyTop:"#0d1622", skyBottom:"#090d14",
+      ground:"#0e1622", groundLine:"#1c2738", grid:"#15202e", tickText:"#33455f",
+      mountain1:"#2d3b52", mountain2:"#33445f", axis:"rgba(124,138,156,.52)",
+      startLine:"rgba(244,114,182,.38)", tickLine:"rgba(124,138,156,.16)",
+      startText:"rgba(244,114,182,.72)", tickLabel:"rgba(124,138,156,.42)", eye:"#0b0f16",
+      chartText:"#46566b", chartGrid:"#26323f", pointFront:"#7d8ba0", pointDom:"#33414f", markStroke:"#0b0f16", waitText:"#3a485c"
+    };
+  }
+  function showTravelBackdrop(){ return true; }
+  function mountainHeight(x,phase){ return 0.32+0.12*Math.sin(x*0.61+phase)+0.07*Math.sin(x*1.37+phase*0.7); }
+  function drawMountainLayer(ox,groundY,parallax,baseHeight,amp,color,alpha,phase){
+    // Draw well beyond both screen edges. The previous bounds used ox instead of
+    // ox*parallax, so the rightmost mountain point could stop inside the canvas
+    // when parallax < 1, leaving a visible clipped/triangular end.
+    const step=0.25, margin=Math.max(240,scale*2.2);
+    const minX=Math.floor((-margin-ox*parallax)/(scale*parallax))-2;
+    const maxX=Math.ceil((W+margin-ox*parallax)/(scale*parallax))+2;
+    ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle=color; ctx.beginPath();
+    ctx.moveTo(-margin,groundY);
+    for(let wx=minX; wx<=maxX+1e-9; wx+=step){
+      const sx=ox*parallax+wx*scale*parallax;
+      const sy=groundY-(baseHeight+amp*mountainHeight(wx,phase))*scale;
+      ctx.lineTo(sx,sy);
+    }
+    ctx.lineTo(W+margin,groundY);
+    ctx.lineTo(-margin,groundY);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function drawTravelBackdrop(ox,groundY){
+    // Faint procedural mountain backdrop plus world-anchored distance markers.
+    const th=canvasTheme();
+    drawMountainLayer(ox,groundY,0.22,0.38,1.05,th.mountain1,isLightTheme()?0.42:0.28,0.7);
+    drawMountainLayer(ox,groundY,0.38,0.18,0.74,th.mountain2,isLightTheme()?0.36:0.20,2.1);
+    const minM=Math.floor((0-ox)/scale)-1, maxM=Math.ceil((W-ox)/scale)+1;
+    ctx.save(); ctx.font="10px JetBrains Mono, monospace"; ctx.textAlign="center";
+    for(let m=minM; m<=maxM; m++){
+      const sx=ox+m*scale;
+      if(sx<-20||sx>W+20) continue;
+      const isStart=m===0;
+      ctx.strokeStyle=isStart?th.startLine:th.tickLine;
+      ctx.lineWidth=isStart?1.4:1;
+      ctx.beginPath(); ctx.moveTo(sx,groundY-1.15*scale); ctx.lineTo(sx,groundY+4); ctx.stroke();
+      ctx.fillStyle=isStart?th.startText:th.tickLabel;
+      ctx.fillText((m>=0?"+":"")+m+"m",sx,groundY-1.18*scale);
+    }
+    ctx.textAlign="left"; ctx.fillStyle=th.axis;
+    ctx.fillText("forward +x →",Math.max(10,Math.min(W-120,ox+0.15*scale)),groundY-1.36*scale);
+    ctx.restore();
+  }
+  function drawAgentDistanceBadges(ox,groundY){
+    if(!showTravelBackdrop()) return;
+    ctx.save(); ctx.font="10px JetBrains Mono, monospace"; ctx.textAlign="center";
+    for(const ag of agents){
+      const pos=ag.h.torso.getPosition(), x=pos.x, sx=ox+x*scale;
+      if(sx<-30||sx>W+30) continue;
+      const dx=x-(ag.stats?ag.stats.startX:0);
+      ctx.strokeStyle=ag.theme.main+"55"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY+14); ctx.stroke();
+      ctx.fillStyle=ag.theme.main; ctx.fillText((dx>=0?"+":"")+dx.toFixed(2)+"m",sx,groundY+27);
+    }
+    ctx.restore();
+  }
+  function render(){
+    const groundY=H*0.86; ctx.setTransform(DPR,0,0,DPR,0,0);
+    const th=canvasTheme();
+    const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,th.skyTop); g.addColorStop(1,th.skyBottom);
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    if(!agents.length) return;
+    let mxc=0; for(const ag of agents) mxc+=ag.h.torso.getPosition().x; mxc/=agents.length;
+    cam+=(mxc-cam)*0.12; const ox=W*0.42-cam*scale;
+    drawTravelBackdrop(ox,groundY);
+    const a0=agents[0], py=groundY-agentMetrics(a0).peak*scale;
+    ctx.strokeStyle=a0.theme.main+"66"; ctx.setLineDash([5,5]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=th.ground; ctx.fillRect(0,groundY,W,H-groundY);
+    ctx.strokeStyle=th.groundLine; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,groundY+.5); ctx.lineTo(W,groundY+.5); ctx.stroke();
+    ctx.textAlign="right"; ctx.font="10px JetBrains Mono, monospace";
+    for(let m=1;m<=3;m++){ const sy=groundY-m*0.5*scale;
+      ctx.strokeStyle=th.grid; ctx.beginPath(); ctx.moveTo(0,sy); ctx.lineTo(W,sy); ctx.stroke();
+      ctx.fillStyle=th.tickText; ctx.fillText((m*0.5).toFixed(1)+"m",W-8,sy-3); }
+    for(const ag of agents){
+      for(const d of ag.h.draw){ const p=d.body.getPosition(), ang=d.body.getAngle();
+        ctx.save(); ctx.translate(ox+p.x*scale,groundY-p.y*scale); ctx.rotate(-ang);
+        const w=d.w*scale, h=Math.max(d.h*scale,3), rr=Math.min(h/2,7);
+        roundRect(ctx,-w/2,-h/2,w,h,rr); ctx.fillStyle=d.torso?ag.theme.torso:ag.theme.main; ctx.fill();
+        if(d.torso){ ctx.fillStyle=th.eye; ctx.beginPath(); ctx.arc(0,-h/2+9,2.6,0,7); ctx.fill(); }
+        ctx.restore(); }
+    }
+    drawAgentDistanceBadges(ox,groundY);
+  }
+
+  // ===== mini charts =====================================================
+  function mini(id){ const cv=document.getElementById(id), c=cv.getContext("2d");
+    return {cv,c,size(){ const r=cv.getBoundingClientRect(); cv.width=r.width*2; cv.height=r.height*2; c.setTransform(2,0,0,2,0,0); return {w:r.width,h:r.height}; }}; }
+  const Pareto=mini("pareto"), Conv=mini("conv"), Motor=mini("motor");
+  function drawPareto(){
+    const {w,h}=Pareto.size(), c=Pareto.c; c.clearRect(0,0,w,h);
+    if(pop.length===0 || (pop[0].f1===0&&pop[POP-1].f1===0)){ c.fillStyle=canvasTheme().waitText; c.font="10px JetBrains Mono"; c.textAlign="center"; c.fillText("Waiting for evaluations…",w/2,h/2+3); return; }
+    if(isSingleObjective()){
+      const order=pop.slice().sort((a,b)=>b.f1-a.f1);
+      const best=order[0];
+      let mn=Infinity,mx=-Infinity; for(const p of order){ if(p.f1<mn)mn=p.f1; if(p.f1>mx)mx=p.f1; }
+      mn=Math.min(mn,REST_Y-0.05); mx=Math.max(mx,REST_Y+0.05);
+      const r=(mx-mn)||1e-6, x=w*0.55, y=h-14-(best.f1-mn)/r*(h-14-8);
+      c.fillStyle=canvasTheme().chartText; c.font="9px JetBrains Mono"; c.textAlign="left"; c.fillText("F1-best only",16,h-3);
+      c.textAlign="right"; c.fillText("higher ↑",w-4,10);
+      c.strokeStyle=canvasTheme().chartGrid; c.lineWidth=1; c.beginPath(); c.moveTo(18,h-14); c.lineTo(w-8,h-14); c.stroke();
+      c.beginPath(); c.arc(x,y,5.3,0,7); c.strokeStyle=canvasTheme().markStroke; c.lineWidth=2.4; c.stroke();
+      c.beginPath(); c.arc(x,y,4.2,0,7); c.fillStyle=TH_F1.main; c.fill();
+      c.fillStyle=TH_F1.main; c.textAlign="center"; c.fillText((Math.max(0,best.f1-REST_Y)).toFixed(2)+" m",x,Math.max(12,y-8));
+      return;
+    }
+    let f1mn=Infinity,f1mx=-Infinity,f2mn=Infinity,f2mx=-Infinity;
+    for(const p of pop){ if(p.f1<f1mn)f1mn=p.f1; if(p.f1>f1mx)f1mx=p.f1; if(p.f2<f2mn)f2mn=p.f2; if(p.f2>f2mx)f2mx=p.f2; }
+    const f1r=(f1mx-f1mn)||1e-6, f2r=(f2mx-f2mn)||1e-6, pad=16;
+    const X=f2=>pad+(f2-f2mn)/f2r*(w-pad-8);          // larger internal f2 score -> right (better)
+    const Y=f1=>h-14-(f1-f1mn)/f1r*(h-14-6);          // higher -> up (better)
+    c.fillStyle=canvasTheme().chartText; c.font="9px JetBrains Mono"; c.textAlign="left";
+    c.fillText(f2Cfg().axis, pad, h-3); c.textAlign="right"; c.fillText("higher ↑", w-4, 10);
+    let p1=pop[0],p2=pop[0]; for(const p of pop){ if(p.f1>p1.f1)p1=p; if(p.f2>p2.f2)p2=p; }
+    const front0=pop.filter(p=>p.rank===0).sort((a,b)=>a.f1-b.f1);
+    const pm=front0.length?front0[Math.floor(front0.length/2)]:p1;
+    for(const p of pop){ c.beginPath(); c.arc(X(p.f2),Y(p.f1),2.2,0,7); c.fillStyle=p.rank===0?canvasTheme().pointFront:canvasTheme().pointDom; c.fill(); }
+    const mark=(p,col)=>{ c.beginPath(); c.arc(X(p.f2),Y(p.f1),5.2,0,7); c.strokeStyle=canvasTheme().markStroke; c.lineWidth=2.4; c.stroke(); c.beginPath(); c.arc(X(p.f2),Y(p.f1),4.2,0,7); c.fillStyle=col; c.fill(); };
+    mark(pm,TH_MID.main); mark(p2,TH_F2.main); mark(p1,TH_F1.main);
+  }
+  function drawConv(){
+    const {w,h}=Conv.size(), c=Conv.c; c.clearRect(0,0,w,h);
+    if(jumpHist.length<2) return;
+    const n=jumpHist.length, X=i=>4+i/(n-1)*(w-8);
+    const norm=(arr)=>{ let mn=Infinity,mx=-Infinity; for(const v of arr){ if(v<mn)mn=v; if(v>mx)mx=v; } const r=(mx-mn)||1e-6; return v=>h-4-(v-mn)/r*(h-9); };
+    const Yj=norm(jumpHist);
+    const line=(arr,Y,col)=>{ c.strokeStyle=col; c.lineWidth=1.6; c.beginPath(); arr.forEach((v,i)=>{const x=X(i),y=Y(v);i?c.lineTo(x,y):c.moveTo(x,y);}); c.stroke(); };
+    if(!isSingleObjective()){ const Ys=norm(spinHist); line(spinHist,Ys,"#ffb454"); }
+    line(jumpHist,Yj,"#f472b6");
+  }
+  function drawMotor(){ const {w,h}=Motor.size(), c=Motor.c; c.clearRect(0,0,w,h);
+    c.strokeStyle=canvasTheme().chartGrid; c.lineWidth=1; c.beginPath(); c.moveTo(0,h/2); c.lineTo(w,h/2); c.stroke();
+    const cp=currentCP(), has=manualMode||cpF1;
+    if(!has){ c.fillStyle=canvasTheme().waitText; c.font="10px JetBrains Mono"; c.textAlign="center"; c.fillText("none yet",w/2,h/2-4); return; }
+    const cols=["#f472b6","#ffb454","#2dd4a7"];
+    for(let j=0;j<3;j++){ c.strokeStyle=cols[j]; c.lineWidth=1.6; c.beginPath();
+      for(let s=0;s<=EP_STEPS;s+=3){ const a=actionAt(cp,Math.min(s,EP_STEPS-1))[j]; const x=s/EP_STEPS*w, y=h/2-a*(h/2-4); s?c.lineTo(x,y):c.moveTo(x,y); }
+      c.stroke(); } }
+  function drawAll(){ drawPareto(); drawConv(); }
+
+  // ===== HUD + controls ==================================================
+  const $=id=>document.getElementById(id);
+  function setVisible(id,on){ const el=$(id); if(el) el.style.display=on?"":"none"; }
+  function updateObjectiveLabels(){
+    const cfg=f2Cfg(), single=isSingleObjective();
+    $("modeTag").textContent=single?"Single objective":"NSGA-II";
+    $("bestF2Label").textContent=cfg.label;
+    $("f2Hint").textContent=cfg.hint;
+    $("paretoTitle").textContent=single?"Single objective / F1-best":"Objective space / Pareto front";
+    $("convTitle").textContent=single?"best height (gen)":"best height / "+cfg.conv+" (gen)";
+    $("convF2Legend").textContent=cfg.conv;
+    $("liveF2Label").textContent=cfg.live;
+    $("liveMidLabel").textContent="Mid";
+    $("replayTitle").textContent=single?"Replaying F1-best only":"Replaying 3 agents";
+    $("paretoLegendA").innerHTML=single?'<i style="background:#7d8ba0"></i>F1-best':'<i style="background:#7d8ba0"></i>non-dominated';
+    $("paretoLegendB").innerHTML='<i style="background:#33414f"></i>dominated';
+    $("paretoLegendC").textContent=single?"one shown agent":"◎ = 3 shown agents";
+    setVisible("paretoLegendB",!single);
+    setVisible("bestF2Row",!single);
+    setVisible("convF2Item",!single);
+    setVisible("liveF2Row",!single);
+    setVisible("liveMidRow",!single);
+  }
+  function updateHUD(){
+    updateObjectiveLabels();
+    $("gen").textContent=gen;
+    $("bestJump").innerHTML=Math.max(0,bestF1-REST_Y).toFixed(2)+'<span style="font-size:11px;color:var(--muted)"> m</span>';
+    $("bestLat").textContent=isSingleObjective()?"":fmtF2(bestF2Raw);
+    $("evalBar").style.width=(idx/POP*100)+"%";
+    $("evoStatus").textContent=running?"Optimizing…":"Idle";
+    $("evoStatus").style.color=running?"var(--pos)":"var(--muted)";
+    if(agents.length>=3){
+      const m0=agentMetrics(agents[0]), m2=agentMetrics(agents[2]);
+      $("liveF1").textContent=Math.max(0,m0.peak-REST_Y).toFixed(2)+" m";
+      $("liveF2").textContent=fmtF2(agentF2Value(agents[1]));
+      $("liveMid").textContent=Math.max(0,m2.peak-REST_Y).toFixed(2)+" m / "+fmtF2(agentF2Value(agents[2]));
+    } else if(agents.length===1){
+      const m=agentMetrics(agents[0]);
+      const label=manualMode?"manual":"F1-best";
+      $("liveF1").textContent=label+": "+Math.max(0,m.peak-REST_Y).toFixed(2)+" m";
+      $("liveF2").textContent="—"; $("liveMid").textContent="—";
+    }
+  }
+  // ===== manual tuning ===================================================
+  let manualMode=false, manualCP=new Float64Array(N);
+  const JLAB=["Hip","Knee","Ankle"];
+  function bestCP(){ return cpF1?Float64Array.from(cpF1):(bestX?decode(bestX):new Float64Array(N)); }
+  function currentCP(){ return manualMode?manualCP:bestCP(); }
+  function buildTuner(){
+    const grid=$("tunerGrid"); grid.innerHTML="";
+    for(let j=0;j<3;j++){
+      const row=document.createElement("div"); row.className="jrow";
+      const lab=document.createElement("span"); lab.className="jlab"; lab.textContent=JLAB[j]; row.appendChild(lab);
+      const cells=document.createElement("div"); cells.className="cells";
+      for(let k=0;k<K;k++){
+        const cell=document.createElement("div"); cell.className="cell";
+        const inp=document.createElement("input"); inp.type="range"; inp.min="-1"; inp.max="1"; inp.step="0.02";
+        inp.value=manualCP[j*K+k]; inp.dataset.idx=j*K+k;
+        inp.addEventListener("input",e=>{ manualCP[+e.target.dataset.idx]=+e.target.value; drawMotor(); });
+        inp.addEventListener("change",startReplay);
+        const num=document.createElement("span"); num.textContent=k+1;
+        cell.appendChild(inp); cell.appendChild(num); cells.appendChild(cell);
+      }
+      row.appendChild(cells); grid.appendChild(row);
+    }
+  }
+  function setTunerValues(){ document.querySelectorAll("#tunerGrid input").forEach(inp=>{ inp.value=manualCP[+inp.dataset.idx]; }); }
+  function makeDraggable(panel, handle){
+    let ox=0, oy=0, dragging=false;
+    handle.style.cursor="move"; handle.style.touchAction="none";
+    handle.addEventListener("pointerdown",e=>{
+      dragging=true; const r=panel.getBoundingClientRect();
+      panel.style.left=r.left+"px"; panel.style.top=r.top+"px"; panel.style.right="auto"; panel.style.bottom="auto"; panel.style.transform="none";
+      ox=e.clientX-r.left; oy=e.clientY-r.top; handle.setPointerCapture(e.pointerId); e.preventDefault();
+    });
+    handle.addEventListener("pointermove",e=>{
+      if(!dragging) return;
+      const m=8, mw=window.innerWidth-panel.offsetWidth-m, mh=window.innerHeight-panel.offsetHeight-m;
+      let x=Math.max(m,Math.min(e.clientX-ox,Math.max(m,mw))), y=Math.max(m,Math.min(e.clientY-oy,Math.max(m,mh)));
+      panel.style.left=x+"px"; panel.style.top=y+"px";
+    });
+    handle.addEventListener("pointerup",e=>{ dragging=false; try{handle.releasePointerCapture(e.pointerId);}catch(_){} });
+  }
+  makeDraggable(document.getElementById("tuner"), document.querySelector("#tuner h4"));
+  function setManual(on){
+    manualMode=on;
+    if(on){ running=false; $("run").textContent="Start optimization"; $("run").classList.add("primary");
+      manualCP=Float64Array.from(bestCP()); buildTuner(); setTunerValues();
+      $("tuner").classList.add("show"); $("tune").textContent="Close tuning"; }
+    else { $("tuner").classList.remove("show"); $("tune").textContent="Manual tuning"; }
+    startReplay(); drawMotor(); updateHUD();
+  }
+  function fullReset(){
+    running=false; $("run").textContent="Start optimization"; $("run").classList.add("primary");
+    gen=0; bestX=null; bestF1=0; bestF2=-Infinity; bestF2Raw=0; cpF1=cpF2=cpMid=null; jumpHist.length=0; spinHist.length=0;
+    initNSGA(); startReplay(); drawAll(); drawMotor(); updateHUD();
+  }
+  $("run").addEventListener("click",()=>{ if(manualMode) setManual(false); running=!running; $("run").textContent=running?"Pause":"Start optimization"; $("run").classList.toggle("primary",!running); });
+  $("reset").addEventListener("click",()=>{ if(manualMode) setManual(false); fullReset(); });
+  $("tune").addEventListener("click",()=>setManual(!manualMode));
+  $("tunerReset").addEventListener("click",()=>{ manualCP=Float64Array.from(bestCP()); setTunerValues(); drawMotor(); startReplay(); });
+  $("f2Mode").addEventListener("change",e=>{ f2Mode=e.target.value; if(manualMode) setManual(false); fullReset(); updateObjectiveLabels(); });
+  $("dl").addEventListener("click",()=>{ const cp=manualMode?manualCP:(cpF1?Float64Array.from(cpF1):null); if(!cp) return;
+    const cfg=f2Cfg(), selectedEval=evalObjectives(cp), single=isSingleObjective();
+    const data={environment:"Hopper-v5",title:"Hopper EC",optimizer:single?"single_objective_elitist_EC":"NSGA-II",
+      objectives:single?["peak_height (max)"]:["peak_height (max)",cfg.save],secondObjectiveMode:single?"none":f2Mode,
+      source:manualMode?"manual_tuning":"optimized",type:"open_loop_torque_trajectory",controlPoints:K,joints:["thigh","leg","foot"],baseTorque:BASE_TORQUE,episodeSteps:EP_STEPS,
+      decode:"tanh",generation:gen,population:POP,offspringPerGeneration:POP,tournamentSize:TOURN,mutationRate:MUT_RATE,selected:manualMode?"manual":"f1-best",
+      survivalSelection:single?"single-objective (mu+lambda): select the top POP individuals by f1 from parents + offspring":"NSGA-II: select POP individuals by non-dominated sorting and crowding distance from parents + offspring",
+      geneticOperators:"same for single-objective and NSGA-II modes: tournament selection, uniform crossover, Gaussian mutation, tanh decoding",
+      f1_peakHeight:selectedEval.f1,jumpHeight:selectedEval.f1-REST_Y,
+      f2_score:single?null:selectedEval.f2,f2_value:single?null:selectedEval.f2Raw,f2_valueName:single?"none":cfg.valueName,
+      metrics:selectedEval.metrics,crouchDropForTakeoffVelocity:CROUCH_DROP,
+      takeoffSpeedDefinition:"upward torso velocity when the foot first leaves the ground after crouching; if a clean contact transition is not found, max upward grounded velocity after crouch is used",
+      crouchSpeedDefinition:"maximum downward torso speed while the foot is grounded before first takeoff",
+      crouchTakeoffSpeedDefinition:"geometric mean of crouchSpeed and takeoffVy, so both must be large for a high score",
+      forwardDistanceDefinition:"maximum forward torso displacement from episode start",
+      travelBackdropDefinition:"shown for all objective modes; distance ticks are world-anchored and mountains are drawn beyond the canvas edges to avoid clipped right-end rendering",
+      controlPointsValues:Array.from(cp)};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob), a=document.createElement("a");
+    a.href=url; a.download="Hopper_EC_controller.json"; a.click(); URL.revokeObjectURL(url); });
+
+  function applyTheme(light){
+    document.body.classList.toggle("light", !!light);
+    const toggle=$("themeToggle"), label=$("themeLabel");
+    if(toggle) toggle.checked=!!light;
+    if(label) label.textContent=light?"Light":"Dark";
+    drawAll(); drawMotor();
+  }
+  const savedTheme=localStorage.getItem("hopperECTheme");
+  const prefersLight=window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+  applyTheme(savedTheme?savedTheme==="light":prefersLight);
+  $("themeToggle").addEventListener("change",e=>{
+    const light=e.target.checked;
+    localStorage.setItem("hopperECTheme", light?"light":"dark");
+    applyTheme(light);
+  });
+
+  function frame(){ optTick(); replayTick(); render(); updateHUD(); requestAnimationFrame(frame); }
+  $("f2Mode").value=f2Mode; updateObjectiveLabels(); resize(); fullReset(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
