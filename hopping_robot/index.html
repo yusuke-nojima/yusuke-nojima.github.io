@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Hopper EC</title>
 <style>
   :root{
@@ -40,7 +40,7 @@
   header .src{margin-left:auto;font-size:11px;color:var(--muted)}
   header .src a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--line)}
   main{flex:1 1 auto;position:relative;min-height:0}
-  canvas#c{display:block;width:100%;height:100%}
+  canvas#c{display:block;width:100%;height:100%;touch-action:none}
 
   .panel{position:absolute;top:16px;left:16px;width:292px;
     background:var(--panel-glass);backdrop-filter:blur(8px);
@@ -61,12 +61,12 @@
   .legend i.line{height:3px;border-radius:2px}
   .btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   button{font:inherit;font-size:12px;color:var(--ink);cursor:pointer;flex:1 1 auto;
-    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;letter-spacing:.02em}
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;letter-spacing:.02em;touch-action:manipulation}
   button:hover{border-color:var(--accent);color:var(--accent)}
   button.primary{background:var(--accent);color:var(--button-primary-text);border-color:var(--accent);font-weight:600}
   button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   select{width:100%;font:inherit;font-size:12px;color:var(--ink);background:var(--panel-2);
-    border:1px solid var(--line);border-radius:8px;padding:8px 9px;outline:none}
+    border:1px solid var(--line);border-radius:8px;padding:8px 9px;outline:none;touch-action:manipulation}
   select:hover,select:focus{border-color:var(--accent)}
   option{background:var(--option-bg);color:var(--ink)}
 
@@ -74,7 +74,7 @@
     background:var(--live-glass);border:1px solid var(--line);border-radius:10px;
     padding:9px 13px;font-size:11px;color:var(--muted);line-height:1.7;width:182px}
   .liveTag b{color:var(--ink)} .liveTag .big{font-size:17px;color:var(--accent);font-weight:600}
-  @media (max-width:780px){.panel{width:230px;padding:11px}.liveTag{display:none}}
+  .mobilePanelToggle{display:none}
   .tuner{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
     background:var(--tuner-glass);backdrop-filter:blur(8px);border:1px solid var(--line);
     border-radius:12px;padding:12px 14px;display:none;z-index:6;max-width:94vw}
@@ -101,6 +101,64 @@
   .themeSwitch input:checked{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--panel-2))}
   .themeSwitch input:checked::after{left:18px;background:var(--accent)}
   body.light canvas.chart{background:#edf2f7}
+
+  @media (max-width:760px), (pointer:coarse) and (max-width:900px){
+    html,body{height:100dvh;overscroll-behavior:none}
+    body{overflow:hidden}
+    .stage{height:100dvh}
+    header{padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;gap:8px;align-items:center;flex-wrap:wrap}
+    header h1{font-size:14px;line-height:1.15}
+    header .tag{font-size:9.5px;padding:2px 7px;letter-spacing:.06em}
+    header .src{display:none}
+    .themeSwitch{margin-left:auto;font-size:10.5px;gap:6px}
+    .themeSwitch input{width:44px;height:26px;min-width:44px}
+    .themeSwitch input::after{top:3px;left:3px;width:18px;height:18px}
+    .themeSwitch input:checked::after{left:21px}
+    .mobilePanelToggle{display:block;position:absolute;right:8px;top:8px;z-index:9;width:auto;min-height:42px;
+      padding:9px 12px;flex:0 0 auto;background:var(--panel-glass);backdrop-filter:blur(8px);box-shadow:0 10px 28px rgba(0,0,0,.18)}
+    body.mobileControlsHidden .mobilePanelToggle{background:var(--panel-2)}
+    .panel{top:56px;left:8px;width:calc(100vw - 16px);max-height:min(calc(62dvh - 48px),512px);overflow-y:auto;
+      -webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:11px;z-index:6;box-shadow:0 12px 32px rgba(0,0,0,.22)}
+    body.mobileControlsHidden .panel{display:none}
+    .row{margin-bottom:5px}.v{font-size:18px}.v.small{font-size:12px}.k{font-size:9.8px;letter-spacing:.07em}
+    .hr{margin:9px -11px}.sub{font-size:9.5px;letter-spacing:.05em;margin-bottom:5px}.progress{height:8px}
+    button,select{font-size:14px;min-height:44px;padding:10px 11px;border-radius:10px}
+    .btns{gap:9px;margin-top:10px}
+    #pareto{height:102px!important}#conv{height:46px!important}#motor{height:48px!important}
+    .legend{gap:9px;font-size:9px;margin-top:5px}.legend i{width:8px;height:8px;margin-right:4px}.legend i.line{height:3px}
+    .liveTag{display:none}
+    body.mobileControlsHidden .liveTag{display:block;left:8px;right:8px;top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));width:auto;z-index:5;
+      padding:8px 10px;font-size:10px;line-height:1.45;pointer-events:none}
+    body.mobileControlsHidden .liveTag .ag{margin-bottom:2px;font-size:10px}
+    body.manualActive .liveTag{display:none!important}
+    .tuner{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));top:auto;transform:none;max-width:none;max-height:min(76dvh,620px);
+      overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:10px;z-index:12;border-radius:14px}
+    .tuner h4{font-size:10px;line-height:1.35;margin-bottom:8px;touch-action:none}
+    .tuner .grid{gap:9px}
+    .tuner .jrow{flex-direction:column;align-items:stretch;gap:5px}
+    .tuner .jlab{width:auto;text-align:left;font-size:12px}
+    .tuner .cells{display:grid;grid-template-columns:repeat(5,minmax(42px,1fr));gap:7px}
+    .tuner .cell{gap:1px;min-width:0}
+    .tuner .cell input[type=range]{writing-mode:horizontal-tb;direction:ltr;width:100%;height:34px;min-height:34px;touch-action:pan-x;accent-color:var(--accent)}
+    .tuner .cell span{font-size:9px}
+    .tuner .foot{flex-direction:column;align-items:stretch;gap:8px;margin-top:9px}
+    .tuner .foot .hint{font-size:10px;line-height:1.35}
+    .tuner .foot button{width:100%;min-height:44px;font-size:14px}
+  }
+
+  @media (max-width:430px){
+    .panel{max-height:54dvh}
+    .tuner .cells{grid-template-columns:repeat(2,minmax(0,1fr))}
+    header .tag{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  }
+
+  @media (max-height:520px) and (orientation:landscape){
+    header{padding-top:6px;padding-bottom:6px}
+    .panel{top:8px;max-height:70dvh;width:min(330px,45vw);right:auto}
+    .tuner{max-height:78dvh}
+    .tuner .cells{grid-template-columns:repeat(5,minmax(70px,1fr))}
+    .mobilePanelToggle{top:8px;right:8px}
+  }
 </style>
 </head>
 <body>
@@ -114,8 +172,9 @@
 
   <main>
     <canvas id="c"></canvas>
+    <button class="mobilePanelToggle mono" id="mobilePanelToggle" type="button" aria-controls="controlPanel" aria-expanded="true">Hide panel</button>
 
-    <div class="panel mono">
+    <div class="panel mono" id="controlPanel">
       <div class="row"><span class="k">generation</span><span class="v" id="gen">0</span></div>
       <div class="row"><span class="k">best jump (f1↑)</span><span class="v acc" id="bestJump">0.00<span style="font-size:11px;color:var(--muted)"> m</span></span></div>
       <div class="row" id="bestF2Row"><span class="k" id="bestF2Label">best spin (f2↑)</span><span class="v small" id="bestLat">0.00 rev</span></div>
@@ -180,6 +239,7 @@
       <div class="foot">
         <span class="hint">Drag the bars; the Hopper replays your controller live.</span>
         <button id="tunerReset">Reset to best</button>
+        <button id="tunerClose">Close tuning</button>
       </div>
     </div>
   </main>
@@ -326,7 +386,7 @@
   }
 
   // ===== NSGA-II =========================================================
-  const POP=100, TOURN=2, MUT_RATE=0.20, GENOMES_PER_FRAME=8;
+  const POP=100, TOURN=2, MUT_RATE=0.20, GENOMES_PER_FRAME=(window.matchMedia&&window.matchMedia("(pointer:coarse)").matches)?4:8;
   const gaSigma=g=>Math.max(0.12, 0.55*Math.pow(0.992,g));
   let pop=[], offspring=[], stage="init", idx=0, gen=0, running=false;
   let bestX=null, bestF1=0, bestF2=-Infinity, bestF2Raw=0;
@@ -465,10 +525,18 @@
   // ===== rendering =======================================================
   const canvas=document.getElementById("c"), ctx=canvas.getContext("2d");
   let W=0,H=0,DPR=1,scale=150,cam=0;
+  function isMobileLayout(){ return window.matchMedia && window.matchMedia("(max-width:760px), (pointer:coarse) and (max-width:900px)").matches; }
   function resize(){ DPR=Math.min(devicePixelRatio||1,2);
     const r=canvas.getBoundingClientRect(); W=r.width; H=r.height; canvas.width=W*DPR; canvas.height=H*DPR;
-    scale=Math.max(95,Math.min(180,H/4.6)); }
-  addEventListener("resize",resize);
+    const mobile=isMobileLayout();
+    scale=Math.max(mobile?82:95,Math.min(mobile?158:180,H/(mobile?5.2:4.6))); }
+  function handleViewportResize(){
+    resize(); updateMobilePanelToggle();
+    if(!document.body.classList.contains("mobileControlsHidden")){ drawAll(); drawMotor(); }
+  }
+  addEventListener("resize",handleViewportResize);
+  addEventListener("orientationchange",()=>setTimeout(handleViewportResize,180));
+  if(window.visualViewport) visualViewport.addEventListener("resize",handleViewportResize);
   function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);
     c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
   function cssVar(name){ return getComputedStyle(document.body).getPropertyValue(name).trim(); }
@@ -633,6 +701,19 @@
 
   // ===== HUD + controls ==================================================
   const $=id=>document.getElementById(id);
+  function updateMobilePanelToggle(){
+    const btn=$("mobilePanelToggle"); if(!btn) return;
+    if(!isMobileLayout()) document.body.classList.remove("mobileControlsHidden");
+    const hidden=document.body.classList.contains("mobileControlsHidden");
+    btn.textContent=hidden?"Show panel":"Hide panel";
+    btn.setAttribute("aria-expanded", String(!hidden));
+  }
+  function setMobilePanelHidden(hidden){
+    document.body.classList.toggle("mobileControlsHidden", !!hidden);
+    updateMobilePanelToggle();
+    if(!hidden) setTimeout(()=>{ drawAll(); drawMotor(); }, 60);
+  }
+  function maybeHideControlsForMobile(){ if(isMobileLayout()) setMobilePanelHidden(true); }
   function setVisible(id,on){ const el=$(id); if(el) el.style.display=on?"":"none"; }
   function updateObjectiveLabels(){
     const cfg=f2Cfg(), single=isSingleObjective();
@@ -645,8 +726,8 @@
     $("liveF2Label").textContent=cfg.live;
     $("liveMidLabel").textContent="Mid";
     $("replayTitle").textContent=single?"Replaying F1-best only":"Replaying 3 agents";
-    $("paretoLegendA").innerHTML=single?'<i style="background:#7d8ba0"></i>F1-best':'<i style="background:#7d8ba0"></i>non-dominated';
-    $("paretoLegendB").innerHTML='<i style="background:#33414f"></i>dominated';
+    $("paretoLegendA").textContent=single?"F1-best":"non-dominated";
+    $("paretoLegendB").textContent="dominated";
     $("paretoLegendC").textContent=single?"one shown agent":"◎ = 3 shown agents";
     setVisible("paretoLegendB",!single);
     setVisible("bestF2Row",!single);
@@ -675,8 +756,12 @@
     }
   }
   // ===== manual tuning ===================================================
-  let manualMode=false, manualCP=new Float64Array(N);
+  let manualMode=false, manualCP=new Float64Array(N), tunerReplayTimer=0;
   const JLAB=["Hip","Knee","Ankle"];
+  function scheduleTunerReplay(){
+    clearTimeout(tunerReplayTimer);
+    tunerReplayTimer=setTimeout(()=>{ if(manualMode) startReplay(); },90);
+  }
   function bestCP(){ return cpF1?Float64Array.from(cpF1):(bestX?decode(bestX):new Float64Array(N)); }
   function currentCP(){ return manualMode?manualCP:bestCP(); }
   function buildTuner(){
@@ -689,8 +774,9 @@
         const cell=document.createElement("div"); cell.className="cell";
         const inp=document.createElement("input"); inp.type="range"; inp.min="-1"; inp.max="1"; inp.step="0.02";
         inp.value=manualCP[j*K+k]; inp.dataset.idx=j*K+k;
-        inp.addEventListener("input",e=>{ manualCP[+e.target.dataset.idx]=+e.target.value; drawMotor(); });
-        inp.addEventListener("change",startReplay);
+        inp.addEventListener("input",e=>{ manualCP[+e.target.dataset.idx]=+e.target.value; drawMotor(); scheduleTunerReplay(); });
+        inp.addEventListener("change",()=>{ clearTimeout(tunerReplayTimer); startReplay(); });
+        inp.addEventListener("pointerup",()=>{ clearTimeout(tunerReplayTimer); startReplay(); });
         const num=document.createElement("span"); num.textContent=k+1;
         cell.appendChild(inp); cell.appendChild(num); cells.appendChild(cell);
       }
@@ -717,9 +803,10 @@
   makeDraggable(document.getElementById("tuner"), document.querySelector("#tuner h4"));
   function setManual(on){
     manualMode=on;
+    document.body.classList.toggle("manualActive", !!on);
     if(on){ running=false; $("run").textContent="Start optimization"; $("run").classList.add("primary");
       manualCP=Float64Array.from(bestCP()); buildTuner(); setTunerValues();
-      $("tuner").classList.add("show"); $("tune").textContent="Close tuning"; }
+      $("tuner").classList.add("show"); $("tune").textContent="Close tuning"; maybeHideControlsForMobile(); }
     else { $("tuner").classList.remove("show"); $("tune").textContent="Manual tuning"; }
     startReplay(); drawMotor(); updateHUD();
   }
@@ -728,10 +815,15 @@
     gen=0; bestX=null; bestF1=0; bestF2=-Infinity; bestF2Raw=0; cpF1=cpF2=cpMid=null; jumpHist.length=0; spinHist.length=0;
     initNSGA(); startReplay(); drawAll(); drawMotor(); updateHUD();
   }
-  $("run").addEventListener("click",()=>{ if(manualMode) setManual(false); running=!running; $("run").textContent=running?"Pause":"Start optimization"; $("run").classList.toggle("primary",!running); });
+  $("run").addEventListener("click",()=>{ if(manualMode) setManual(false); running=!running; $("run").textContent=running?"Pause":"Start optimization"; $("run").classList.toggle("primary",!running); if(running) maybeHideControlsForMobile(); });
   $("reset").addEventListener("click",()=>{ if(manualMode) setManual(false); fullReset(); });
   $("tune").addEventListener("click",()=>setManual(!manualMode));
+  const mobilePanelToggle=$("mobilePanelToggle");
+  if(mobilePanelToggle) mobilePanelToggle.addEventListener("click",()=>setMobilePanelHidden(!document.body.classList.contains("mobileControlsHidden")));
+  addEventListener("resize",updateMobilePanelToggle);
+  addEventListener("orientationchange",()=>setTimeout(updateMobilePanelToggle,200));
   $("tunerReset").addEventListener("click",()=>{ manualCP=Float64Array.from(bestCP()); setTunerValues(); drawMotor(); startReplay(); });
+  $("tunerClose").addEventListener("click",()=>setManual(false));
   $("f2Mode").addEventListener("change",e=>{ f2Mode=e.target.value; if(manualMode) setManual(false); fullReset(); updateObjectiveLabels(); });
   $("dl").addEventListener("click",()=>{ const cp=manualMode?manualCP:(cpF1?Float64Array.from(cpF1):null); if(!cp) return;
     const cfg=f2Cfg(), selectedEval=evalObjectives(cp), single=isSingleObjective();
@@ -771,7 +863,7 @@
   });
 
   function frame(){ optTick(); replayTick(); render(); updateHUD(); requestAnimationFrame(frame); }
-  $("f2Mode").value=f2Mode; updateObjectiveLabels(); resize(); fullReset(); requestAnimationFrame(frame);
+  $("f2Mode").value=f2Mode; updateObjectiveLabels(); updateMobilePanelToggle(); resize(); fullReset(); requestAnimationFrame(frame);
 })();
 </script>
 </body>
