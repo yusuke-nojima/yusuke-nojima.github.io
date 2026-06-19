@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Hopper EC</title>
 <style>
   :root{
@@ -40,7 +40,7 @@
   header .src{margin-left:auto;font-size:11px;color:var(--muted)}
   header .src a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--line)}
   main{flex:1 1 auto;position:relative;min-height:0}
-  canvas#c{display:block;width:100%;height:100%;touch-action:none}
+  canvas#c{display:block;width:100%;height:100%}
 
   .panel{position:absolute;top:16px;left:16px;width:292px;
     background:var(--panel-glass);backdrop-filter:blur(8px);
@@ -61,20 +61,36 @@
   .legend i.line{height:3px;border-radius:2px}
   .btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   button{font:inherit;font-size:12px;color:var(--ink);cursor:pointer;flex:1 1 auto;
-    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;letter-spacing:.02em;touch-action:manipulation}
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;letter-spacing:.02em}
   button:hover{border-color:var(--accent);color:var(--accent)}
   button.primary{background:var(--accent);color:var(--button-primary-text);border-color:var(--accent);font-weight:600}
   button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   select{width:100%;font:inherit;font-size:12px;color:var(--ink);background:var(--panel-2);
-    border:1px solid var(--line);border-radius:8px;padding:8px 9px;outline:none;touch-action:manipulation}
+    border:1px solid var(--line);border-radius:8px;padding:8px 9px;outline:none}
   select:hover,select:focus{border-color:var(--accent)}
   option{background:var(--option-bg);color:var(--ink)}
 
-  .liveTag{position:absolute;top:16px;right:16px;
+  .liveTag{position:absolute;top:16px;right:16px;z-index:8;
     background:var(--live-glass);border:1px solid var(--line);border-radius:10px;
-    padding:9px 13px;font-size:11px;color:var(--muted);line-height:1.7;width:182px}
+    padding:9px 13px;font-size:11px;color:var(--muted);line-height:1.7;width:182px;
+    box-shadow:0 10px 30px rgba(0,0,0,.16);transition:width .18s,opacity .18s,transform .18s}
   .liveTag b{color:var(--ink)} .liveTag .big{font-size:17px;color:var(--accent);font-weight:600}
-  .mobilePanelToggle{display:none}
+  .liveTag .ag{display:flex;align-items:center;gap:7px;margin-bottom:4px;font-size:11px;color:var(--muted)}
+  .liveTag .ag .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
+  .liveTag .ag b{margin-left:auto;color:var(--ink);font-weight:600}
+  .statusHead{display:flex;align-items:center;gap:8px;margin-bottom:7px;color:var(--muted);min-width:0}
+  .statusHead #replayTitle{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .statusMini{display:none;color:var(--ink);font-weight:600;font-size:10.5px;white-space:nowrap}
+  .statusToggle{flex:0 0 auto;width:24px;height:24px;min-width:24px;padding:0;display:grid;place-items:center;
+    border-radius:7px;font-size:14px;line-height:1;background:var(--panel-2);color:var(--ink)}
+  .statusToggle:hover{border-color:var(--accent);color:var(--accent)}
+  .liveTag.collapsed{width:auto;min-width:152px;padding:7px 9px}
+  .liveTag.collapsed .statusBody{display:none}
+  .liveTag.collapsed .statusHead{margin-bottom:0}
+  .liveTag.collapsed .statusMini{display:inline-block}
+
+  .mobilePanelToggle{display:none;position:absolute;z-index:11;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
+    width:auto;min-width:118px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
   .tuner{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
     background:var(--tuner-glass);backdrop-filter:blur(8px);border:1px solid var(--line);
     border-radius:12px;padding:12px 14px;display:none;z-index:6;max-width:94vw}
@@ -102,63 +118,67 @@
   .themeSwitch input:checked::after{left:18px;background:var(--accent)}
   body.light canvas.chart{background:#edf2f7}
 
-  @media (max-width:760px), (pointer:coarse) and (max-width:900px){
-    html,body{height:100dvh;overscroll-behavior:none}
-    body{overflow:hidden}
-    .stage{height:100dvh}
-    header{padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;gap:8px;align-items:center;flex-wrap:wrap}
-    header h1{font-size:14px;line-height:1.15}
-    header .tag{font-size:9.5px;padding:2px 7px;letter-spacing:.06em}
+
+  @media (max-width:780px), (pointer:coarse) and (max-width:900px){
+    header{gap:9px;padding:10px 12px;align-items:center;flex-wrap:wrap}
+    header h1{font-size:14px}
+    header .tag{font-size:9.5px;padding:2px 7px}
     header .src{display:none}
-    .themeSwitch{margin-left:auto;font-size:10.5px;gap:6px}
-    .themeSwitch input{width:44px;height:26px;min-width:44px}
-    .themeSwitch input::after{top:3px;left:3px;width:18px;height:18px}
-    .themeSwitch input:checked::after{left:21px}
-    .mobilePanelToggle{display:block;position:absolute;right:8px;top:8px;z-index:9;width:auto;min-height:42px;
-      padding:9px 12px;flex:0 0 auto;background:var(--panel-glass);backdrop-filter:blur(8px);box-shadow:0 10px 28px rgba(0,0,0,.18)}
-    body.mobileControlsHidden .mobilePanelToggle{background:var(--panel-2)}
-    .panel{top:56px;left:8px;width:calc(100vw - 16px);max-height:min(calc(62dvh - 48px),512px);overflow-y:auto;
-      -webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:11px;z-index:6;box-shadow:0 12px 32px rgba(0,0,0,.22)}
+    .themeSwitch{margin-left:auto}
+    .panel{width:min(316px,calc(100vw - 18px));top:92px;left:9px;padding:11px;
+      max-height:calc(100% - 102px);overflow:auto;-webkit-overflow-scrolling:touch}
     body.mobileControlsHidden .panel{display:none}
-    .row{margin-bottom:5px}.v{font-size:18px}.v.small{font-size:12px}.k{font-size:9.8px;letter-spacing:.07em}
-    .hr{margin:9px -11px}.sub{font-size:9.5px;letter-spacing:.05em;margin-bottom:5px}.progress{height:8px}
-    button,select{font-size:14px;min-height:44px;padding:10px 11px;border-radius:10px}
-    .btns{gap:9px;margin-top:10px}
-    #pareto{height:102px!important}#conv{height:46px!important}#motor{height:48px!important}
-    .legend{gap:9px;font-size:9px;margin-top:5px}.legend i{width:8px;height:8px;margin-right:4px}.legend i.line{height:3px}
-    .liveTag{display:none}
-    body.mobileControlsHidden .liveTag{display:block;left:8px;right:8px;top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));width:auto;z-index:5;
-      padding:8px 10px;font-size:10px;line-height:1.45;pointer-events:none}
-    body.mobileControlsHidden .liveTag .ag{margin-bottom:2px;font-size:10px}
-    body.manualActive .liveTag{display:none!important}
-    .tuner{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));top:auto;transform:none;max-width:none;max-height:min(76dvh,620px);
-      overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:10px;z-index:12;border-radius:14px}
-    .tuner h4{font-size:10px;line-height:1.35;margin-bottom:8px;touch-action:none}
-    .tuner .grid{gap:9px}
-    .tuner .jrow{flex-direction:column;align-items:stretch;gap:5px}
-    .tuner .jlab{width:auto;text-align:left;font-size:12px}
-    .tuner .cells{display:grid;grid-template-columns:repeat(5,minmax(42px,1fr));gap:7px}
-    .tuner .cell{gap:1px;min-width:0}
-    .tuner .cell input[type=range]{writing-mode:horizontal-tb;direction:ltr;width:100%;height:34px;min-height:34px;touch-action:pan-x;accent-color:var(--accent)}
-    .tuner .cell span{font-size:9px}
-    .tuner .foot{flex-direction:column;align-items:stretch;gap:8px;margin-top:9px}
-    .tuner .foot .hint{font-size:10px;line-height:1.35}
-    .tuner .foot button{width:100%;min-height:44px;font-size:14px}
+    .mobilePanelToggle{display:block;top:52px;left:9px;right:auto;bottom:auto;min-width:112px}
+    .liveTag{display:block;top:8px!important;bottom:auto!important;left:9px;right:9px;width:auto;
+      padding:7px 10px;font-size:10.5px;line-height:1.45;max-width:none}
+    .liveTag .ag{font-size:10.5px;margin-bottom:2px}
+    .liveTag .ag .dot{width:8px;height:8px}
+    .statusHead{margin-bottom:5px}
+    .statusToggle{width:30px;height:30px;min-width:30px;font-size:16px}
+    .liveTag.collapsed{left:auto;right:9px;width:min(190px,calc(100vw - 18px));min-width:0;padding:6px 8px}
+    .liveTag.collapsed #replayTitle{max-width:90px}
+    .tuner{left:9px;right:9px;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:none;max-width:none;
+      max-height:50vh;overflow:auto;-webkit-overflow-scrolling:touch;padding:11px 12px}
+    .tuner .jrow{align-items:center;gap:8px}
+    .tuner .jlab{width:42px;text-align:left}
+    .tuner .cells{display:grid;grid-template-columns:repeat(5,minmax(40px,1fr));gap:6px;flex:1}
+    .tuner .cell input[type=range]{writing-mode:horizontal-tb;direction:ltr;width:100%;height:28px;touch-action:pan-y}
+    .tuner .foot{align-items:stretch;flex-wrap:wrap;gap:8px}
+    .tuner .foot .hint{flex:1 1 100%}
+    .tuner .foot button{flex:1 1 auto;min-height:38px}
+    button,select{font-size:13px;min-height:38px}
+  }
+  @media (max-width:520px){
+    .liveTag .ag b{font-size:10px}
+    .liveTag:not(.collapsed) .statusBody{display:grid;gap:1px}
+    .liveTag:not(.collapsed) #replayTitle{max-width:calc(100vw - 92px)}
+    .panel{top:88px;width:calc(100vw - 18px)}
+    .chart#pareto{height:94px!important}
+    .chart#conv{height:44px!important}
+    .chart#motor{height:46px!important}
   }
 
-  @media (max-width:430px){
-    .panel{max-height:54dvh}
-    .tuner .cells{grid-template-columns:repeat(2,minmax(0,1fr))}
-    header .tag{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* Mobile status panel: keep it above the scene so the feet remain visible. */
+  @media (max-width:780px), (pointer:coarse) and (max-width:900px){
+    .mobilePanelToggle{top:calc(8px + env(safe-area-inset-top,0px));bottom:auto;left:8px;right:auto;min-width:92px;padding:8px 10px;z-index:12}
+    .liveTag{top:calc(8px + env(safe-area-inset-top,0px))!important;right:8px!important;bottom:auto!important;left:auto!important;width:min(184px,calc(100vw - 116px))!important;max-width:184px!important;padding:6px 8px;font-size:10px;line-height:1.42;border-radius:10px;z-index:11}
+    .statusHead{margin-bottom:4px;gap:5px}
+    .statusToggle{width:24px;height:24px;min-width:24px;font-size:13px;border-radius:8px}
+    .liveTag .ag{font-size:10px;margin-bottom:2px;gap:5px}
+    .liveTag .ag .dot{width:7px;height:7px}
+    .liveTag .ag b{font-size:10px}
+    .liveTag.collapsed{top:calc(8px + env(safe-area-inset-top,0px))!important;right:8px!important;left:auto!important;bottom:auto!important;width:auto!important;min-width:0!important;max-width:calc(100vw - 16px)!important;padding:5px 6px}
+    .liveTag.collapsed #replayTitle{display:none}
+    .liveTag.collapsed .statusToggle{width:auto;height:24px;min-width:0;padding:3px 8px;font-size:11px}
+    .liveTag.collapsed .statusMini{font-size:10px}
+    .panel{top:calc(100px + env(safe-area-inset-top,0px));max-height:calc(100svh - 114px)}
+  }
+  @media (max-width:380px){
+    .mobilePanelToggle{min-width:82px;padding:7px 9px;font-size:11.5px}
+    .liveTag{width:min(164px,calc(100vw - 104px))!important}
   }
 
-  @media (max-height:520px) and (orientation:landscape){
-    header{padding-top:6px;padding-bottom:6px}
-    .panel{top:8px;max-height:70dvh;width:min(330px,45vw);right:auto}
-    .tuner{max-height:78dvh}
-    .tuner .cells{grid-template-columns:repeat(5,minmax(70px,1fr))}
-    .mobilePanelToggle{top:8px;right:8px}
-  }
 </style>
 </head>
 <body>
@@ -172,9 +192,9 @@
 
   <main>
     <canvas id="c"></canvas>
-    <button class="mobilePanelToggle mono" id="mobilePanelToggle" type="button" aria-controls="controlPanel" aria-expanded="true">Hide panel</button>
+    <button id="mobilePanelToggle" class="mobilePanelToggle mono" type="button" aria-expanded="true">Hide panel</button>
 
-    <div class="panel mono" id="controlPanel">
+    <div class="panel mono">
       <div class="row"><span class="k">generation</span><span class="v" id="gen">0</span></div>
       <div class="row"><span class="k">best jump (f1↑)</span><span class="v acc" id="bestJump">0.00<span style="font-size:11px;color:var(--muted)"> m</span></span></div>
       <div class="row" id="bestF2Row"><span class="k" id="bestF2Label">best spin (f2↑)</span><span class="v small" id="bestLat">0.00 rev</span></div>
@@ -226,12 +246,18 @@
       </div>
     </div>
 
-    <div class="liveTag mono">
-      <div id="replayTitle" style="margin-bottom:7px;color:var(--muted)">Replaying 3 agents</div>
-      <div class="ag"><span class="dot" style="background:#f472b6"></span>F1 height <b id="liveF1">—</b></div>
-      <div class="ag" id="liveF2Row"><span class="dot" style="background:#ffb454"></span><span id="liveF2Label">F2 spin</span> <b id="liveF2">—</b></div>
-      <div class="ag" id="liveMidRow"><span class="dot" style="background:#46d3e0"></span><span id="liveMidLabel">Mid</span> <b id="liveMid">—</b></div>
-      <div style="margin-top:7px"><b id="evoStatus">Idle</b></div>
+    <div class="liveTag mono" id="statusPanel">
+      <div class="statusHead">
+        <span id="replayTitle">Replaying 3 agents</span>
+        <span id="statusMini" class="statusMini">Idle</span>
+        <button id="statusToggle" class="statusToggle" type="button" aria-label="Collapse status panel" aria-expanded="true">−</button>
+      </div>
+      <div class="statusBody">
+        <div class="ag"><span class="dot" style="background:#f472b6"></span>F1 height <b id="liveF1">—</b></div>
+        <div class="ag" id="liveF2Row"><span class="dot" style="background:#ffb454"></span><span id="liveF2Label">F2 spin</span> <b id="liveF2">—</b></div>
+        <div class="ag" id="liveMidRow"><span class="dot" style="background:#46d3e0"></span><span id="liveMidLabel">Mid</span> <b id="liveMid">—</b></div>
+        <div style="margin-top:7px"><b id="evoStatus">Idle</b></div>
+      </div>
     </div>
     <div class="tuner mono" id="tuner">
       <h4>≡ Manual tuning — torque control points · drag to move</h4>
@@ -701,6 +727,20 @@
 
   // ===== HUD + controls ==================================================
   const $=id=>document.getElementById(id);
+  function setStatusCollapsed(collapsed){
+    const panel=$("statusPanel"), btn=$("statusToggle");
+    if(!panel||!btn) return;
+    panel.classList.toggle("collapsed", !!collapsed);
+    btn.textContent=collapsed?"+":"−";
+    btn.setAttribute("aria-expanded", String(!collapsed));
+    btn.setAttribute("aria-label", collapsed?"Expand status panel":"Collapse status panel");
+    try{ localStorage.setItem("hopperECStatusCollapsed", collapsed?"1":"0"); }catch(_){ }
+  }
+  function restoreStatusPanelState(){
+    let collapsed=false;
+    try{ collapsed=localStorage.getItem("hopperECStatusCollapsed")==="1"; }catch(_){ }
+    setStatusCollapsed(collapsed);
+  }
   function updateMobilePanelToggle(){
     const btn=$("mobilePanelToggle"); if(!btn) return;
     if(!isMobileLayout()) document.body.classList.remove("mobileControlsHidden");
@@ -743,6 +783,10 @@
     $("evalBar").style.width=(idx/POP*100)+"%";
     $("evoStatus").textContent=running?"Optimizing…":"Idle";
     $("evoStatus").style.color=running?"var(--pos)":"var(--muted)";
+    if($("statusMini")){
+      $("statusMini").textContent=running?"Optimizing":"Idle";
+      $("statusMini").style.color=running?"var(--pos)":"var(--muted)";
+    }
     if(agents.length>=3){
       const m0=agentMetrics(agents[0]), m2=agentMetrics(agents[2]);
       $("liveF1").textContent=Math.max(0,m0.peak-REST_Y).toFixed(2)+" m";
@@ -820,6 +864,7 @@
   $("tune").addEventListener("click",()=>setManual(!manualMode));
   const mobilePanelToggle=$("mobilePanelToggle");
   if(mobilePanelToggle) mobilePanelToggle.addEventListener("click",()=>setMobilePanelHidden(!document.body.classList.contains("mobileControlsHidden")));
+  if($("statusToggle")) $("statusToggle").addEventListener("click",()=>setStatusCollapsed(!$("statusPanel").classList.contains("collapsed")));
   addEventListener("resize",updateMobilePanelToggle);
   addEventListener("orientationchange",()=>setTimeout(updateMobilePanelToggle,200));
   $("tunerReset").addEventListener("click",()=>{ manualCP=Float64Array.from(bestCP()); setTunerValues(); drawMotor(); startReplay(); });
@@ -863,7 +908,7 @@
   });
 
   function frame(){ optTick(); replayTick(); render(); updateHUD(); requestAnimationFrame(frame); }
-  $("f2Mode").value=f2Mode; updateObjectiveLabels(); updateMobilePanelToggle(); resize(); fullReset(); requestAnimationFrame(frame);
+  restoreStatusPanelState(); $("f2Mode").value=f2Mode; updateObjectiveLabels(); updateMobilePanelToggle(); resize(); fullReset(); requestAnimationFrame(frame);
 })();
 </script>
 </body>
